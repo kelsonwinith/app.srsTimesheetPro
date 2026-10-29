@@ -121,6 +121,9 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
               </div>
             </button>
 
+            {/* Divider between logo and nav menu */}
+            <div className="hidden h-6 w-px bg-slate-200 md:block dark:bg-slate-700" />
+
             {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center gap-1">
               {navItems
