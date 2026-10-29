@@ -53,6 +53,7 @@ interface TimesheetContextType {
   syncWithRealApi: (targetDate?: string) => Promise<boolean>;
   fetchRealTagsForProject: (projectId: number) => Promise<{ tag_timesheet_id: number; tag_name: string; tag_element_ts: string }[]>;
   addCustomProject: (project: Project) => void;
+  updateUserAvatar: (avatarUrl: string) => void;
 
   // Time Entry CRUD
   addTimesheet: (
@@ -353,6 +354,14 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setProjects((prev) => [...prev, proj]);
   };
 
+  const updateUserAvatar = (avatarUrl: string) => {
+    setCurrentUserState((prev) => {
+      const next = { ...prev, avatarUrl };
+      saveStoredUserProfile(next);
+      return next;
+    });
+  };
+
   // Clean initialization: purge any leftover mock data from previous sessions
   useEffect(() => {
     setIsClient(true);
@@ -411,8 +420,11 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } else {
         const storedProfile = getStoredUserProfile();
-        if (storedProfile && storedProfile.employeeId && storedProfile.employeeId !== 0) {
-          setCurrentUserState(storedProfile);
+        if (storedProfile && (storedProfile.displayName || storedProfile.employeeId)) {
+          setCurrentUserState({
+            ...DEFAULT_USER,
+            ...storedProfile,
+          });
         } else {
           setCurrentUserState(DEFAULT_USER);
         }
@@ -762,6 +774,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         syncWithRealApi,
         fetchRealTagsForProject,
         addCustomProject,
+        updateUserAvatar,
         addTimesheet,
         updateTimesheet,
         deleteTimesheet,

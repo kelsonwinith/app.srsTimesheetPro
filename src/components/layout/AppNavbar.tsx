@@ -33,6 +33,8 @@ import {
   RefreshCw,
   Lock,
   Sparkles,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Connect365Modal } from "@/components/auth/Connect365Modal";
@@ -46,6 +48,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
   const {
     currentUser,
     setCurrentUser,
+    updateUserAvatar,
     users,
     timesheets,
     auditLogs,
@@ -58,11 +61,36 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
   const [safetyDialogOpen, setSafetyDialogOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        updateUserAvatar(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const initials = (currentUser.displayName || "Sinthon Wilke")
+    .split(" ")
+    .map((n) => n[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "SW";
+
+  const hasCustomAvatar = Boolean(
+    currentUser.avatarUrl &&
+    currentUser.avatarUrl.trim() !== "" &&
+    currentUser.avatarUrl !== "/assets/images/profile.svg"
+  );
 
   const hasUser = Boolean(
     currentUser &&
-    currentUser.employeeId &&
-    currentUser.employeeId !== 0 &&
     currentUser.displayName &&
     currentUser.displayName.trim() !== ""
   );
@@ -182,6 +210,15 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
               <ShieldCheck className="size-3 text-emerald-600 ml-0.5" />
             </button>
 
+            {/* Hidden Photo Upload Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarFileChange}
+            />
+
             {/* User Switcher Dropdown OR Sync Timesheet Button */}
             {hasUser ? (
               <DropdownMenu>
@@ -192,13 +229,18 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                       className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-9 px-2.5 text-xs rounded-xl shadow-2xs"
                     >
                       <div className="relative size-6 overflow-hidden rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 shrink-0">
-                        <Image
-                          src={currentUser.avatarUrl || "/assets/images/profile.svg"}
-                          alt={currentUser.displayName}
-                          fill
-                          sizes="24px"
-                          className="object-cover"
-                        />
+                        {hasCustomAvatar ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.displayName}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <div className="size-full flex items-center justify-center font-bold text-[10px] text-white bg-gradient-to-tr from-emerald-600 to-teal-500">
+                            {initials}
+                          </div>
+                        )}
                       </div>
                       <span className="hidden sm:inline font-semibold text-slate-800 dark:text-slate-200">
                         {currentUser.displayName}
@@ -217,15 +259,30 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
 
                   {/* Profile Body */}
                   <div className="p-4 flex flex-col items-center text-center space-y-3">
-                    {/* Profile Image */}
-                    <div className="relative size-16 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs">
-                      <Image
-                        src={currentUser.avatarUrl || "/assets/images/profile.svg"}
-                        alt={currentUser.displayName}
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                      />
+                    {/* Profile Image & Upload Overlay */}
+                    <div className="group relative size-16 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs cursor-pointer">
+                      {hasCustomAvatar ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={currentUser.avatarUrl}
+                          alt={currentUser.displayName}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <div className="size-full flex items-center justify-center font-bold text-lg text-white bg-gradient-to-tr from-emerald-600 to-teal-500">
+                          {initials}
+                        </div>
+                      )}
+                      {/* Photo change overlay */}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        title="Upload profile photo"
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-[10px] text-white font-semibold transition"
+                      >
+                        <Camera className="size-4" />
+                        <span>Change</span>
+                      </button>
                     </div>
 
                     {/* Employee ID & Name & Job & Dept */}
@@ -264,6 +321,13 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
 
                   {/* Actions */}
                   <div className="p-1.5 space-y-0.5">
+                    <DropdownMenuItem
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      <Upload className="size-3.5 text-slate-500" />
+                      Upload Profile Image
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setConnectModalOpen(true)}
                       className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50 cursor-pointer"

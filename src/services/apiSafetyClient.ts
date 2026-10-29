@@ -53,6 +53,19 @@ export function getStoredUserProfile(): any | null {
   }
 }
 
+export function decodeJwt(token: string): { aud?: string | string[]; iss?: string; exp?: number; [key: string]: any } | null {
+  try {
+    const clean = token.trim().replace(/^Bearer\s+/i, "");
+    const parts = clean.split(".");
+    if (parts.length < 2) return null;
+    let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    while (b64.length % 4) b64 += "=";
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  } catch {
+    return null;
+  }
+}
+
 export function saveStoredUserProfile(profile: any) {
   if (typeof window === "undefined") return;
   try {
@@ -131,16 +144,22 @@ export async function safeFetchBackend<T>(
 
   try {
     const creds = getStoredApiCredentials();
-    const activeToken = token || creds.token;
-    const activeEmpId = employeeId || creds.employeeId;
+    const activeToken = (token || creds.token || "").trim().replace(/^Bearer\s+/i, "").replace(/"/g, "");
+    const activeEmpId = employeeId || creds.employeeId || "663";
+
+    // Clean token whitespace/URL-encoding artifact
+    let cleanToken = activeToken;
+    if (cleanToken.includes(" ") && !cleanToken.includes(".")) {
+      cleanToken = cleanToken.replace(/ /g, "+");
+    }
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json; charset=utf-8",
       ...(options.headers as Record<string, string> || {}),
     };
 
-    if (activeToken) {
-      headers["Authorization"] = `Bearer ${activeToken.trim().replace(/^Bearer\s+/i, "")}`;
+    if (cleanToken) {
+      headers["Authorization"] = `Bearer ${cleanToken}`;
     }
     if (activeEmpId) {
       headers["Employee-Id"] = String(activeEmpId);
@@ -154,10 +173,14 @@ export async function safeFetchBackend<T>(
     const json = await response.json();
 
     if (!response.ok || !json.ok) {
+      let errorMsg = json.data?.message || json.error || `HTTP ${response.status}`;
+      if (response.status === 401 && (json.data?.message === "Invalid signature" || json.error === "Invalid signature")) {
+        errorMsg = "Invalid signature: The active token was rejected by backend.timesheet.sirisoft.co.th. Check whether the token is an MS Graph token (User.Read) instead of the Backend API token, or if the token has expired.";
+      }
       return {
         success: false,
         status: response.status,
-        error: json.data?.message || json.error || `HTTP ${response.status}`,
+        error: errorMsg,
         data: json.data,
       };
     }

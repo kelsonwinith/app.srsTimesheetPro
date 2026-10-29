@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useTimesheet } from "@/context/TimesheetContext";
-import { safeFetchBackend } from "@/services/apiSafetyClient";
+import {
+  safeFetchBackend,
+  getStoredApiCredentials,
+  saveStoredApiCredentials,
+  decodeJwt,
+} from "@/services/apiSafetyClient";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +22,11 @@ import {
   AlertTriangle,
   Play,
   Terminal,
+  Key,
+  Eye,
+  EyeOff,
+  Check,
+  Info,
 } from "lucide-react";
 
 export const SettingView: React.FC = () => {
@@ -30,6 +41,36 @@ export const SettingView: React.FC = () => {
 
   const [cutoffDate, setCutoffDate] = useState(lockConfig.unlock_timesheet_date);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Credentials state
+  const [tokenInput, setTokenInput] = useState("");
+  const [empIdInput, setEmpIdInput] = useState("663");
+  const [showToken, setShowToken] = useState(false);
+  const [credsSaved, setCredsSaved] = useState(false);
+
+  useEffect(() => {
+    const creds = getStoredApiCredentials();
+    if (creds.token) setTokenInput(creds.token);
+    if (creds.employeeId) setEmpIdInput(creds.employeeId);
+  }, []);
+
+  const decodedTokenInfo = useMemo(() => {
+    if (!tokenInput) return null;
+    return decodeJwt(tokenInput);
+  }, [tokenInput]);
+
+  const isGraphToken = useMemo(() => {
+    if (!decodedTokenInfo) return false;
+    const aud = String(decodedTokenInfo.aud || "").toLowerCase();
+    return aud.includes("graph.microsoft.com") || aud.includes("00000003-0000-0000-c000-000000000000");
+  }, [decodedTokenInfo]);
+
+  const handleSaveCredentials = () => {
+    saveStoredApiCredentials(tokenInput.trim(), empIdInput.trim());
+    setCredsSaved(true);
+    toast.success("API credentials saved to local storage!");
+    setTimeout(() => setCredsSaved(false), 3000);
+  };
 
   // Safety test states
   const [testEndpoint, setTestEndpoint] = useState("/timesheet-service/leave");
@@ -47,7 +88,12 @@ export const SettingView: React.FC = () => {
     setIsTesting(true);
     setTestResponse(null);
     try {
-      const res = await safeFetchBackend(testEndpoint, { method: "GET" });
+      const res = await safeFetchBackend(
+        testEndpoint,
+        { method: "GET" },
+        tokenInput.trim(),
+        empIdInput.trim()
+      );
       setTestResponse(JSON.stringify(res, null, 2));
       refreshAuditLogs();
     } catch (err: unknown) {
@@ -165,7 +211,101 @@ export const SettingView: React.FC = () => {
             (Read) is allowed. All POST, PUT, DELETE, PATCH calls to the backend are blocked.
           </p>
 
-          <div className="space-y-3 pt-2">
+          {/* Token Credentials & Inspection */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 space-y-2.5 dark:border-slate-800 dark:bg-slate-800/40 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Key className="size-3.5 text-emerald-600" />
+                Backend Bearer Token &amp; Credentials:
+              </span>
+              {credsSaved && (
+                <span className="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+                  <Check className="size-3" /> Saved!
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] font-semibold text-slate-500">Employee ID</label>
+                <Input
+                  type="text"
+                  value={empIdInput}
+                  onChange={(e) => setEmpIdInput(e.target.value)}
+                  className="h-8 text-xs font-mono bg-white dark:bg-slate-900"
+                />
+              </div>
+              <div className="sm:col-span-3 space-y-1">
+                <label className="text-[10px] font-semibold text-slate-500">Bearer Token (JWT)</label>
+                <div className="flex gap-1.5">
+                  <Input
+                    type={showToken ? "text" : "password"}
+                    value={tokenInput}
+                    onChange={(e) => setTokenInput(e.target.value)}
+                    placeholder="eyJhbGciOiJSUzI1NiIs..."
+                    className="h-8 text-xs font-mono bg-white dark:bg-slate-900 flex-1 truncate"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowToken(!showToken)}
+                    className="h-8 px-2 text-slate-500"
+                    title={showToken ? "Hide Token" : "Show Token"}
+                  >
+                    {showToken ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSaveCredentials}
+                    className="h-8 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold"
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Token Diagnostics */}
+            {decodedTokenInfo && (
+              <div className="rounded border border-slate-200 bg-white p-2 text-[10px] font-mono space-y-1 dark:border-slate-800 dark:bg-slate-900">
+                <div className="flex items-center justify-between text-slate-500 font-sans font-semibold">
+                  <span>Token Diagnostics:</span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[9px] ${
+                      isGraphToken
+                        ? "border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950"
+                        : "border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950"
+                    }`}
+                  >
+                    {isGraphToken ? "Graph Token (User.Read)" : "Backend API Token"}
+                  </Badge>
+                </div>
+                <div className="text-slate-600 dark:text-slate-300 truncate">
+                  Audience (aud): {JSON.stringify(decodedTokenInfo.aud)}
+                </div>
+                {decodedTokenInfo.iss && (
+                  <div className="text-slate-500 truncate">Issuer: {decodedTokenInfo.iss}</div>
+                )}
+                {decodedTokenInfo.exp && (
+                  <div className="text-slate-500">
+                    Expires: {new Date(decodedTokenInfo.exp * 1000).toLocaleString()}
+                  </div>
+                )}
+                {isGraphToken && (
+                  <div className="font-sans text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/40 p-1.5 rounded mt-1 border border-amber-200/60 dark:border-amber-900/40">
+                    <strong>⚠️ Invalid Signature Cause:</strong> This token has audience &apos;Microsoft Graph&apos;.
+                    Kong requires the Backend API token (from requests to <code>backend.timesheet.sirisoft.co.th</code>).
+                    To resolve, re-sync with the updated Bookmarklet or paste your backend token above.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 pt-1">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Test Safe Endpoint (GET)
@@ -186,7 +326,7 @@ export const SettingView: React.FC = () => {
                 size="sm"
                 onClick={handleTestSafeGet}
                 disabled={isTesting}
-                className="flex-1 text-xs text-emerald-800 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-300"
+                className="flex-1 text-xs text-emerald-800 border-emerald-300 hover:bg-emerald-50 dark:text-emerald-300 font-semibold"
               >
                 <Play className="size-3 mr-1" />
                 Test Safe GET Request
@@ -197,7 +337,7 @@ export const SettingView: React.FC = () => {
                 size="sm"
                 onClick={handleTestBlockedMutation}
                 disabled={isTesting}
-                className="flex-1 text-xs text-rose-700 border-rose-300 hover:bg-rose-50 dark:text-rose-400"
+                className="flex-1 text-xs text-rose-700 border-rose-300 hover:bg-rose-50 dark:text-rose-400 font-semibold"
               >
                 <AlertTriangle className="size-3 mr-1" />
                 Test Blocked POST
@@ -206,7 +346,7 @@ export const SettingView: React.FC = () => {
 
             {testResponse && (
               <div className="rounded-lg border border-slate-200 bg-slate-950 p-3 text-[11px] font-mono text-emerald-400 dark:border-slate-800 max-h-48 overflow-y-auto">
-                <div className="text-slate-400 mb-1 flex items-center gap-1">
+                <div className="text-slate-400 mb-1 flex items-center gap-1 font-sans text-xs">
                   <Terminal className="size-3" />
                   Interceptor Console:
                 </div>

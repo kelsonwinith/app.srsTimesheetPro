@@ -1,16 +1,16 @@
 import { Customer, LeaveType, LockConfig, Project, TaskType, TimesheetEntry, UserProfile } from "@/types/timesheet";
 
 export const DEFAULT_USER: UserProfile = {
-  id: "",
-  employeeId: 0,
-  displayName: "",
-  givenName: "",
-  jobTitle: "",
-  mail: "",
-  department: "",
+  id: "663",
+  employeeId: 663,
+  displayName: "Sinthon Wilke",
+  givenName: "Sinthon",
+  jobTitle: "Software Developer",
+  mail: "sinthon.w@sirisoft.co.th",
+  department: "Software Development",
   role: "Employee",
-  menu: ["timesheet"],
-  reportTo: "",
+  menu: ["timesheet", "approval", "projectManagement", "report", "setting"],
+  reportTo: "Pongsiri Kamkongkaew",
   avatarUrl: "",
 };
 
