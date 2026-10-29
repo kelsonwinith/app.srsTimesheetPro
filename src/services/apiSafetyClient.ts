@@ -140,7 +140,8 @@ export async function safeFetchBackend<T>(
     };
 
     if (activeToken) {
-      headers["Authorization"] = `Bearer ${activeToken.trim().replace(/^Bearer\s+/i, "")}`;
+      const cleanToken = activeToken.trim().replace(/^"|"$/g, "").replace(/^Bearer\s+/i, "");
+      headers["Authorization"] = `Bearer ${cleanToken}`;
     }
     if (activeEmpId) {
       headers["Employee-Id"] = String(activeEmpId);

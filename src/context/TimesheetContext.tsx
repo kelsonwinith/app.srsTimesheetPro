@@ -127,8 +127,12 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       if (!projRes.success && projRes.status === 401) {
         setIsRealApiConnected(false);
-        setApiSyncError("Unauthorized (401): Please provide a valid Azure AD Bearer Token.");
+        const errDetail = projRes.error || "Invalid signature";
+        setApiSyncError(`Unauthorized (401): ${errDetail}. Your session token has expired or is invalid.`);
         setIsSyncingApi(false);
+        toast.error("Timesheet Session Expired or Invalid", {
+          description: `Backend returned 401 (${errDetail}). Please refresh timesheet.sirisoft.co.th and re-sync your session.`,
+        });
         return false;
       }
 

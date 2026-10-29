@@ -14,6 +14,8 @@ export async function GET(
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json; charset=utf-8",
+      "Origin": "https://timesheet.sirisoft.co.th",
+      "Referer": "https://timesheet.sirisoft.co.th/",
     };
 
     const authHeader = request.headers.get("authorization");
