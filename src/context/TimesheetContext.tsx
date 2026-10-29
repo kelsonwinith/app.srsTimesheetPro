@@ -263,23 +263,23 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           profileObj.empId ||
           profileObj.id ||
           profileObj.employee_id ||
-          663;
+          0;
         const displayName =
           profileObj.displayName ||
           profileObj.name ||
           (profileObj.givenName ? `${profileObj.givenName} ${profileObj.surname || ""}`.trim() : "") ||
-          "Sinthon Wilke";
-        const email = profileObj.mail || profileObj.email || profileObj.userPrincipalName || "sinthon.w@sirisoft.co.th";
-        const givenName = profileObj.givenName || (displayName ? displayName.split(" ")[0] : "Sinthon");
-        const department = profileObj.department || profileObj.division || "Software Development";
-        const jobTitle = profileObj.jobTitle || profileObj.position || profileObj.title || "Software Developer";
+          "";
+        const email = profileObj.mail || profileObj.email || profileObj.userPrincipalName || "";
+        const givenName = profileObj.givenName || (displayName ? displayName.split(" ")[0] : "");
+        const department = profileObj.department || profileObj.division || "";
+        const jobTitle = profileObj.jobTitle || profileObj.position || profileObj.title || "";
         const reportTo =
           profileObj.reportTo ||
           profileObj.report_to ||
           profileObj.manager ||
           profileObj.managerName ||
           profileObj.supervisor ||
-          "Pongsiri Kamkongkaew";
+          "";
         const avatarUrl =
           profileObj.avatarUrl ||
           profileObj.photo ||
@@ -289,9 +289,9 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         const updated: UserProfile = {
           id: String(extractedEmpId || "user-current"),
-          employeeId: extractedEmpId ? Number(extractedEmpId) || 663 : 663,
-          displayName: displayName || "Sinthon Wilke",
-          givenName: givenName || "Sinthon",
+          employeeId: extractedEmpId ? Number(extractedEmpId) || 0 : 0,
+          displayName,
+          givenName,
           jobTitle,
           mail: email,
           department,
@@ -309,10 +309,10 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (tok) {
         const payload = decodeJwtPayload(tok);
         if (payload) {
-          const displayName = payload.name || payload.preferred_username || "Sinthon Wilke";
-          const email = payload.preferred_username || payload.email || payload.upn || "sinthon.w@sirisoft.co.th";
-          const givenName = payload.given_name || (displayName ? displayName.split(" ")[0] : "Sinthon");
-          const extractedEmpId = empId || payload.employeeId || payload.empId || 663;
+          const displayName = payload.name || payload.preferred_username || "";
+          const email = payload.preferred_username || payload.email || payload.upn || "";
+          const givenName = payload.given_name || (displayName ? displayName.split(" ")[0] : "");
+          const extractedEmpId = empId || payload.employeeId || payload.empId || 0;
 
           setCurrentUserState((prev) => {
             const next: UserProfile = {
@@ -321,9 +321,6 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               mail: email || prev.mail,
               givenName: givenName || prev.givenName,
               employeeId: extractedEmpId ? Number(extractedEmpId) || prev.employeeId : prev.employeeId,
-              jobTitle: prev.jobTitle || "Software Developer",
-              department: prev.department || "Software Development",
-              reportTo: prev.reportTo || "Pongsiri Kamkongkaew",
               avatarUrl: prev.avatarUrl || "/assets/images/profile.svg",
             };
             saveStoredUserProfile(next);
@@ -414,15 +411,10 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } else {
         const storedProfile = getStoredUserProfile();
-        if (storedProfile) {
-          setCurrentUserState({
-            ...DEFAULT_USER,
-            ...storedProfile,
-            reportTo: storedProfile.reportTo || "Pongsiri Kamkongkaew",
-            avatarUrl: storedProfile.avatarUrl || "/assets/images/profile.svg",
-            jobTitle: storedProfile.jobTitle || "Software Developer",
-            department: storedProfile.department || "Software Development",
-          });
+        if (storedProfile && storedProfile.employeeId && storedProfile.employeeId !== 0) {
+          setCurrentUserState(storedProfile);
+        } else {
+          setCurrentUserState(DEFAULT_USER);
         }
 
         const creds = getStoredApiCredentials();

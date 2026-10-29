@@ -60,9 +60,11 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   const hasUser = Boolean(
-    (currentUser && currentUser.employeeId && currentUser.employeeId !== 0) ||
-    (currentUser && currentUser.displayName && currentUser.displayName !== "Timesheet User") ||
-    isRealApiConnected
+    currentUser &&
+    currentUser.employeeId &&
+    currentUser.employeeId !== 0 &&
+    currentUser.displayName &&
+    currentUser.displayName.trim() !== ""
   );
 
   // Calculate pending approvals for the manager

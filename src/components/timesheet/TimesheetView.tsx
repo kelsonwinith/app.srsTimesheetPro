@@ -47,10 +47,17 @@ export const TimesheetView: React.FC = () => {
     calculateMonthSummary,
   } = useTimesheet();
 
-  // Selected date state (defaults to October 2026 or current month)
-  const [selectedYear, setSelectedYear] = useState(2026);
-  const [selectedMonth, setSelectedMonth] = useState(10); // October (1-based)
-  const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
+  // Selected date state (initialized statically for Next.js prerender, updated in useEffect)
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<number>(10);
+  const [viewMode, setViewModeState] = useState<"calendar" | "table">("calendar");
+
+  const setViewMode = (mode: "calendar" | "table") => {
+    setViewModeState(mode);
+    try {
+      localStorage.setItem("sirisoft_view_mode", mode);
+    } catch {}
+  };
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "Waiting" | "Approve" | "Reject">("ALL");
 
@@ -59,10 +66,19 @@ export const TimesheetView: React.FC = () => {
   const [editingEntry, setEditingEntry] = useState<TimesheetEntry | null>(null);
   const [selectedDetailEntry, setSelectedDetailEntry] = useState<TimesheetEntry | null>(null);
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>(undefined);
-  const [todayStr, setTodayStr] = useState<string>("2026-10-29");
+  const [todayStr, setTodayStr] = useState<string>("");
 
   React.useEffect(() => {
-    setTodayStr(new Date().toISOString().split("T")[0]);
+    const now = new Date();
+    setTodayStr(now.toISOString().split("T")[0]);
+    setSelectedYear(now.getFullYear());
+    setSelectedMonth(now.getMonth() + 1);
+    try {
+      const saved = localStorage.getItem("sirisoft_view_mode");
+      if (saved === "calendar" || saved === "table") {
+        setViewModeState(saved);
+      }
+    } catch {}
   }, []);
 
   // Month navigation

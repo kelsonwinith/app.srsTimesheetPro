@@ -114,18 +114,9 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
     {
       id: "seg-1",
       startTime: "09:00",
-      finishTime: "12:00",
-      projectId: 0,
-      task: "Development (Frontend/Backend)",
-      tagName: "",
-      detail: "",
-    },
-    {
-      id: "seg-2",
-      startTime: "13:00",
       finishTime: "18:00",
       projectId: 0,
-      task: "Development (Frontend/Backend)",
+      task: "",
       tagName: "",
       detail: "",
     },
@@ -163,22 +154,29 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
         setSingleDetail("");
         if (projects.length > 0) {
           setSingleProjectId(projects[0].project_id);
+          const firstTask = projects[0].tasks?.[0]?.task_name || "";
+          setSingleTask(firstTask);
           setSegments([
             {
               id: `seg-${Date.now()}-1`,
               startTime: "09:00",
-              finishTime: "12:00",
+              finishTime: "18:00",
               projectId: projects[0].project_id,
-              task: "Development (Frontend/Backend)",
+              task: firstTask,
               tagName: "",
               detail: "",
             },
+          ]);
+        } else {
+          setSingleProjectId(0);
+          setSingleTask("");
+          setSegments([
             {
-              id: `seg-${Date.now()}-2`,
-              startTime: "13:00",
+              id: `seg-${Date.now()}-1`,
+              startTime: "09:00",
               finishTime: "18:00",
-              projectId: projects[0].project_id,
-              task: "Development (Frontend/Backend)",
+              projectId: 0,
+              task: "",
               tagName: "",
               detail: "",
             },
