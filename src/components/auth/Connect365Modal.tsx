@@ -40,13 +40,13 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
   }, []);
 
   const bookmarkletCode = useMemo(() => {
-    return `javascript:(function(){try{let kt='',gt='',ft='',eid='',p=null;function scan(st){try{for(let i=0;i<st.length;i++){const k=st.key(i);if(!k)continue;const v=st.getItem(k);if(!v)continue;const lk=k.toLowerCase();if(lk.includes('accesstoken')){try{const o=JSON.parse(v);if(o&&o.secret){const tg=(o.target||'').toLowerCase();if(tg.includes('kong')||tg.includes('backend')||tg.includes('d6a5eecc')){kt=o.secret;}else if(!gt){gt=o.secret;}}}catch(x){}}if(!ft&&v.startsWith('eyJ')&&v.split('.').length===3){ft=v.replace(/^"|"$/g,'');}if(lk==='employeeid'||lk==='empid'){eid=v.replace(/^"|"$/g,'');}if(lk==='userprofile'||lk==='user'){try{const u=JSON.parse(v);if(u&&typeof u==='object'){p=u;if(u.employeeId)eid=String(u.employeeId);else if(u.empId)eid=String(u.empId);else if(u.id)eid=String(u.id);}}catch(x){}}}}catch(x){}}scan(localStorage);scan(sessionStorage);const tok=kt||gt||ft;if(!tok&&!p){alert('Could not find active Sirisoft session. Please ensure you are logged in on timesheet.sirisoft.co.th!');return;}const parts=[];if(tok)parts.push('token='+encodeURIComponent(tok));if(eid)parts.push('empId='+encodeURIComponent(eid));if(p)parts.push('profile='+encodeURIComponent(JSON.stringify(p)));const targetUrl='${clientOrigin}#'+parts.join('&');const w=window.open(targetUrl,'_blank');if(!w||w.closed||typeof w.closed==='undefined'){window.location.href=targetUrl;}}catch(err){alert('Connecting Timesheet error: '+err.message);}})();`;
+    return `javascript:(function(){try{let kt='',gt='',ft='',eid='',p=null;function scan(st){try{for(let i=0;i<st.length;i++){const k=st.key(i);if(!k)continue;const v=st.getItem(k);if(!v)continue;const lk=k.toLowerCase();if(lk.includes('accesstoken')){try{const o=JSON.parse(v);if(o&&o.secret){const tg=(o.target||'').toLowerCase();if(tg.includes('kong')||tg.includes('backend')||tg.includes('d6a5eecc')){kt=o.secret;}else if(!gt){gt=o.secret;}}}catch(x){}}if(!ft&&v.startsWith('eyJ')&&v.split('.').length===3){ft=v.replace(/^"|"$/g,'');}if(lk==='employeeid'||lk==='empid'){eid=v.replace(/^"|"$/g,'');}if(lk==='userprofile'||lk==='user'||lk==='profile'||lk==='employee'||lk==='user_profile'){try{const u=JSON.parse(v);if(u&&typeof u==='object'){p=u;if(u.employeeId)eid=String(u.employeeId);else if(u.empId)eid=String(u.empId);else if(u.id)eid=String(u.id);}}catch(x){}}}}catch(x){}}scan(localStorage);scan(sessionStorage);const tok=kt||gt||ft;if(!tok&&!p){alert('Could not find active Sirisoft session. Please ensure you are logged in on timesheet.sirisoft.co.th!');return;}const parts=[];if(tok)parts.push('token='+encodeURIComponent(tok));if(eid)parts.push('empId='+encodeURIComponent(eid));if(p)parts.push('profile='+encodeURIComponent(JSON.stringify(p)));const targetUrl='${clientOrigin}#'+parts.join('&');const w=window.open(targetUrl,'_blank');if(!w||w.closed||typeof w.closed==='undefined'){window.location.href=targetUrl;}}catch(err){alert('Sync Timesheet error: '+err.message);}})();`;
   }, [clientOrigin]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(bookmarkletCode);
     setCopiedBookmarklet(true);
-    toast.success("Copied 'Connecting Timesheet' bookmarklet URL to clipboard!");
+    toast.success("Copied 'Sync Timesheet' bookmarklet URL to clipboard!");
     setTimeout(() => setCopiedBookmarklet(false), 2000);
   };
 
@@ -56,7 +56,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 text-base font-bold">
             <Sparkles className="size-4 text-emerald-600" />
-            Connecting Timesheet
+            Sync Timesheet
           </DialogTitle>
           <DialogDescription className="text-xs">
             1-Click Bookmarklet syncs your active session directly from <code>timesheet.sirisoft.co.th</code> with zero manual typing.
@@ -70,7 +70,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
               <div className="flex items-center gap-2">
                 <Bookmark className="size-4 text-emerald-700 dark:text-emerald-400" />
                 <span className="font-bold text-xs text-emerald-950 dark:text-emerald-200">
-                  Bookmarklet: Connecting Timesheet
+                  Bookmarklet: Sync Timesheet
                 </span>
               </div>
               <Badge className="bg-emerald-700 text-white text-[10px] px-2 py-0.5 font-bold">
@@ -85,16 +85,16 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
               <a
                 href={bookmarkletCode}
-                title="Connecting Timesheet"
+                title="Sync Timesheet"
                 onClick={(e) => {
                   alert(
-                    "Drag this 'Connecting Timesheet' button to your Bookmarks Bar (press Cmd+Shift+B or Ctrl+Shift+B to display your bookmarks bar). Then click it whenever you are on timesheet.sirisoft.co.th!"
+                    "Drag this 'Sync Timesheet' button to your Bookmarks Bar (press Cmd+Shift+B or Ctrl+Shift+B to display your bookmarks bar). Then click it whenever you are on timesheet.sirisoft.co.th!"
                   );
                 }}
                 className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-800 cursor-grab active:cursor-grabbing transition"
               >
                 <Sparkles className="size-4" />
-                <span>⚡ Connecting Timesheet</span>
+                <span>⚡ Sync Timesheet</span>
               </a>
 
               <Button
@@ -109,7 +109,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
                 ) : (
                   <Copy className="size-3.5" />
                 )}
-                <span>{copiedBookmarklet ? "Copied URL!" : "Copy Connecting Timesheet"}</span>
+                <span>{copiedBookmarklet ? "Copied URL!" : "Copy Sync Timesheet"}</span>
               </Button>
             </div>
           </div>
@@ -122,7 +122,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
             <ol className="space-y-2 text-xs text-slate-600 dark:text-slate-300 list-decimal list-inside">
               <li>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Drag the &quot;Connecting Timesheet&quot; button above
+                  Drag the &quot;Sync Timesheet&quot; button above
                 </span>{" "}
                 to your browser Bookmarks Bar (<kbd className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[10px] dark:bg-slate-800">Cmd+Shift+B</kbd>).
               </li>
@@ -141,7 +141,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
               </li>
               <li>
                 <span className="font-semibold text-slate-800 dark:text-slate-200">
-                  Click the &quot;Connecting Timesheet&quot; bookmark
+                  Click the &quot;Sync Timesheet&quot; bookmark
                 </span>
                 . Your session transfers securely via local hash and instantly connects your account.
               </li>

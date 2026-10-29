@@ -2,14 +2,16 @@ import { Customer, LeaveType, LockConfig, Project, TaskType, TimesheetEntry, Use
 
 export const DEFAULT_USER: UserProfile = {
   id: "user-current",
-  employeeId: 0,
-  displayName: "Timesheet User",
-  givenName: "User",
-  jobTitle: "Team Member",
-  mail: "user@sirisoft.co.th",
-  department: "Application Development",
+  employeeId: 663,
+  displayName: "Sinthon Wilke",
+  givenName: "Sinthon",
+  jobTitle: "Software Developer",
+  mail: "sinthon.w@sirisoft.co.th",
+  department: "Software Development",
   role: "Employee",
   menu: ["timesheet", "approval", "projectManagement", "report", "setting"],
+  reportTo: "Pongsiri Kamkongkaew",
+  avatarUrl: "/assets/images/profile.svg",
 };
 
 export const MOCK_USERS: UserProfile[] = [DEFAULT_USER];

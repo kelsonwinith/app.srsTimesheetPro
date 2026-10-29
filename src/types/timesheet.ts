@@ -89,6 +89,8 @@ export interface UserProfile {
   department: string;
   role: "Employee" | "Manager" | "Admin";
   menu: string[];
+  reportTo?: string;
+  avatarUrl?: string;
 }
 
 export interface LockConfig {

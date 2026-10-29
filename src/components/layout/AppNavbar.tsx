@@ -182,47 +182,96 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
               <ShieldCheck className="size-3 text-emerald-600 ml-0.5" />
             </button>
 
-            {/* User Switcher Dropdown OR Connecting 365 Button */}
+            {/* User Switcher Dropdown OR Sync Timesheet Button */}
             {hasUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
                     <Button
                       variant="outline"
-                      className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-8 px-2.5 text-xs"
+                      className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-9 px-2.5 text-xs rounded-xl shadow-2xs"
                     >
-                      <div className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white">
-                        {currentUser.givenName.substring(0, 2).toUpperCase()}
+                      <div className="relative size-6 overflow-hidden rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 shrink-0">
+                        <Image
+                          src={currentUser.avatarUrl || "/assets/images/profile.svg"}
+                          alt={currentUser.displayName}
+                          fill
+                          sizes="24px"
+                          className="object-cover"
+                        />
                       </div>
                       <span className="hidden sm:inline font-semibold text-slate-800 dark:text-slate-200">
                         {currentUser.displayName}
                       </span>
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 border-slate-200">
-                        {currentUser.role}
-                      </Badge>
                       <ChevronDown className="size-3 text-slate-400" />
                     </Button>
                   }
                 />
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="px-2.5 py-2 flex flex-col space-y-0.5 border-b border-slate-100 dark:border-slate-800">
-                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{currentUser.displayName}</p>
-                    <p className="text-[11px] text-muted-foreground">{currentUser.mail}</p>
-                  </div>
-                  <div className="px-2.5 py-2 text-[11px] text-slate-500">
-                    <span className="text-slate-400">Employee ID:</span>{" "}
-                    <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
-                      {currentUser.employeeId || "Not connected"}
+                <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  {/* Profile Header */}
+                  <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Profile
                     </span>
                   </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setConnectModalOpen(true)}
-                    className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold cursor-pointer"
-                  >
-                    <Sparkles className="size-3.5 mr-2 text-emerald-600" />
-                    Re-sync Connecting Timesheet
-                  </DropdownMenuItem>
+
+                  {/* Profile Body */}
+                  <div className="p-4 flex flex-col items-center text-center space-y-3">
+                    {/* Profile Image */}
+                    <div className="relative size-16 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs">
+                      <Image
+                        src={currentUser.avatarUrl || "/assets/images/profile.svg"}
+                        alt={currentUser.displayName}
+                        fill
+                        sizes="64px"
+                        className="object-cover"
+                      />
+                    </div>
+
+                    {/* Employee ID & Name & Job & Dept */}
+                    <div className="space-y-1 w-full">
+                      <div className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        {currentUser.employeeId || 663}
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 pt-0.5">
+                        {currentUser.displayName || "Sinthon Wilke"}
+                      </h4>
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                        {currentUser.jobTitle || "Software Developer"}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {currentUser.department || "Software Development"}
+                      </p>
+                    </div>
+
+                    {/* Report To Section */}
+                    <div className="w-full rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-left">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                        Report To
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="size-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                          {(currentUser.reportTo || "Pongsiri Kamkongkaew").substring(0, 1)}
+                        </div>
+                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {currentUser.reportTo || "Pongsiri Kamkongkaew"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <DropdownMenuSeparator className="m-0" />
+
+                  {/* Actions */}
+                  <div className="p-1.5 space-y-0.5">
+                    <DropdownMenuItem
+                      onClick={() => setConnectModalOpen(true)}
+                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50 cursor-pointer"
+                    >
+                      <Sparkles className="size-3.5 text-emerald-600" />
+                      Re-sync Timesheet
+                    </DropdownMenuItem>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -230,14 +279,14 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                 variant="default"
                 size="sm"
                 onClick={() => setConnectModalOpen(true)}
-                className="h-8 gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-xs px-3"
+                className="h-9 gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-bold shadow-xs px-3.5 rounded-xl"
               >
                 {isSyncingApi ? (
                   <RefreshCw className="size-3.5 animate-spin" />
                 ) : (
                   <Sparkles className="size-3.5" />
                 )}
-                <span>{isSyncingApi ? "Connecting Timesheet..." : "Connecting Timesheet"}</span>
+                <span>{isSyncingApi ? "Syncing Timesheet..." : "Sync Timesheet"}</span>
               </Button>
             )}
 
