@@ -513,10 +513,10 @@ export const TimesheetView: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Hover hint */}
-                  <div className="hidden group-hover:flex flex-col items-center justify-center text-center text-emerald-600 dark:text-emerald-400 font-semibold pt-1">
-                    <Plus className="size-3.5" />
-                    <span className="text-[9px]">Add Time Entry</span>
+                  {/* Hover hint: icon inline with text, centered */}
+                  <div className="hidden group-hover:flex items-center justify-center gap-1 text-center text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold pt-1 w-full">
+                    <Plus className="size-3 shrink-0" />
+                    <span>Add Time Entry</span>
                   </div>
                 </div>
               );
