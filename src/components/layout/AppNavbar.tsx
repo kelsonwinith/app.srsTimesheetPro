@@ -104,25 +104,25 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
       <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95 shadow-2xs">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Logo & Brand */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center">
             <button
               onClick={() => onTabChange("timesheet")}
-              className="flex items-center gap-3 text-left focus:outline-hidden"
+              className="flex items-center text-left focus:outline-hidden"
             >
-              <div className="relative h-9 w-32 overflow-hidden">
+              <div className="relative h-8 w-[92px] shrink-0">
                 <Image
                   src="/assets/images/logo-home.png"
                   alt="Sirisoft Logo"
                   fill
-                  sizes="128px"
-                  className="object-contain object-left"
+                  sizes="92px"
+                  className="object-contain"
                   priority
                 />
               </div>
             </button>
 
-            {/* Divider between logo and nav menu */}
-            <div className="hidden h-6 w-px bg-slate-200 md:block dark:bg-slate-700" />
+            {/* Divider between logo and nav menu with equal gap on both sides */}
+            <div className="hidden h-5 w-px bg-slate-200 md:block dark:bg-slate-700 mx-5" />
 
             {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center gap-1">
