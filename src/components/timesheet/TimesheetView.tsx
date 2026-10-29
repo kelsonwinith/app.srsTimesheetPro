@@ -50,7 +50,7 @@ export const TimesheetView: React.FC = () => {
   // Selected date state (defaults to October 2026 or current month)
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(10); // October (1-based)
-  const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
+  const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "Waiting" | "Approve" | "Reject">("ALL");
 
@@ -196,17 +196,6 @@ export const TimesheetView: React.FC = () => {
           {/* Dual View Toggle */}
           <div className="flex rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
             <button
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
-                viewMode === "table"
-                  ? "bg-emerald-50 text-emerald-800 shadow-2xs dark:bg-emerald-950 dark:text-emerald-300"
-                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-              }`}
-            >
-              <List className="size-3.5" />
-              <span>Table</span>
-            </button>
-            <button
               onClick={() => setViewMode("calendar")}
               className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
                 viewMode === "calendar"
@@ -216,6 +205,17 @@ export const TimesheetView: React.FC = () => {
             >
               <CalendarIcon className="size-3.5" />
               <span>Calendar</span>
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                viewMode === "table"
+                  ? "bg-emerald-50 text-emerald-800 shadow-2xs dark:bg-emerald-950 dark:text-emerald-300"
+                  : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
+              }`}
+            >
+              <List className="size-3.5" />
+              <span>Table</span>
             </button>
           </div>
 
@@ -312,8 +312,108 @@ export const TimesheetView: React.FC = () => {
         </div>
       </div>
 
-      {/* Main View Area (Table View First and Default) */}
-      {viewMode === "table" ? (
+      {/* Main View Area (Calendar View First and Default) */}
+      {viewMode === "calendar" ? (
+        /* ============ CALENDAR & TIMELINE VIEW ============ */
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
+          {/* Day of Week Header */}
+          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-500">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+              <div key={d} className="py-1">
+                {d}
+              </div>
+            ))}
+          </div>
+
+          {/* Month Days Grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {/* Blank offset placeholders without rendering visible box */}
+            {Array.from({ length: calendarDays.startOffset }).map((_, idx) => (
+              <div key={`offset-${idx}`} className="hidden sm:block" />
+            ))}
+
+            {/* Actual Days */}
+            {calendarDays.days.map((day) => {
+              const isToday = todayStr === day.dateStr;
+              const isComplete = day.totalHours >= 8.0;
+              const isIncomplete = day.totalHours > 0 && day.totalHours < 8.0;
+
+              return (
+                <div
+                  key={day.dateStr}
+                  onClick={() => handleOpenAddForDate(day.dateStr)}
+                  className={`group relative min-h-24 rounded-lg border p-2 flex flex-col justify-between transition cursor-pointer ${
+                    isToday
+                      ? "border-emerald-600 bg-emerald-50/30 dark:border-emerald-400 dark:bg-emerald-950/20"
+                      : day.isWeekend
+                      ? "border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/40"
+                      : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs dark:border-slate-800 dark:bg-slate-900"
+                  }`}
+                >
+                  {/* Day header */}
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`size-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                        isToday
+                          ? "bg-emerald-700 text-white"
+                          : "text-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      {day.dayNumber}
+                    </span>
+
+                    {day.totalHours > 0 && (
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                          isComplete
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                            : isIncomplete
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {day.totalHours.toFixed(1)}h
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Day Entries mini pills */}
+                  <div className="mt-1 space-y-1 flex-1 overflow-hidden">
+                    {day.entries.slice(0, 2).map((e) => (
+                      <div
+                        key={e.timesheet_id}
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setSelectedDetailEntry(e);
+                        }}
+                        className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          e.leave > 0
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                            : e.timesheet_status === "Approve"
+                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        }`}
+                      >
+                        {e.leave > 0 ? e.task : e.project_code}: {e.man_hour}h
+                      </div>
+                    ))}
+                    {day.entries.length > 2 && (
+                      <div className="text-[9px] text-slate-400 pl-1 font-semibold">
+                        +{day.entries.length - 2} more
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hover hint */}
+                  <div className="hidden group-hover:block text-[9px] text-emerald-600 font-semibold pt-1">
+                    + Click to log
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
         /* ============ TABLE VIEW ============ */
         <div className="rounded-xl border border-slate-200 bg-white shadow-2xs overflow-hidden dark:border-slate-800 dark:bg-slate-900">
           <div className="overflow-x-auto">
@@ -477,106 +577,6 @@ export const TimesheetView: React.FC = () => {
           <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800">
             <span>Showing {userEntries.length} entries</span>
             <span>Month total: <strong className="text-slate-800 dark:text-slate-200">{summary.totalHours.toFixed(1)} hrs</strong></span>
-          </div>
-        </div>
-      ) : (
-        /* ============ CALENDAR & TIMELINE VIEW ============ */
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-          {/* Day of Week Header */}
-          <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-500">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="py-1">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Month Days Grid */}
-          <div className="grid grid-cols-7 gap-2">
-            {/* Blank offset placeholders without rendering visible box */}
-            {Array.from({ length: calendarDays.startOffset }).map((_, idx) => (
-              <div key={`offset-${idx}`} className="hidden sm:block" />
-            ))}
-
-            {/* Actual Days */}
-            {calendarDays.days.map((day) => {
-              const isToday = todayStr === day.dateStr;
-              const isComplete = day.totalHours >= 8.0;
-              const isIncomplete = day.totalHours > 0 && day.totalHours < 8.0;
-
-              return (
-                <div
-                  key={day.dateStr}
-                  onClick={() => handleOpenAddForDate(day.dateStr)}
-                  className={`group relative min-h-24 rounded-lg border p-2 flex flex-col justify-between transition cursor-pointer ${
-                    isToday
-                      ? "border-emerald-600 bg-emerald-50/30 dark:border-emerald-400 dark:bg-emerald-950/20"
-                      : day.isWeekend
-                      ? "border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/40"
-                      : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs dark:border-slate-800 dark:bg-slate-900"
-                  }`}
-                >
-                  {/* Day header */}
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`size-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                        isToday
-                          ? "bg-emerald-700 text-white"
-                          : "text-slate-700 dark:text-slate-300"
-                      }`}
-                    >
-                      {day.dayNumber}
-                    </span>
-
-                    {day.totalHours > 0 && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                          isComplete
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                            : isIncomplete
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                            : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {day.totalHours.toFixed(1)}h
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Day Entries mini pills */}
-                  <div className="mt-1 space-y-1 flex-1 overflow-hidden">
-                    {day.entries.slice(0, 2).map((e) => (
-                      <div
-                        key={e.timesheet_id}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setSelectedDetailEntry(e);
-                        }}
-                        className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                          e.leave > 0
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                            : e.timesheet_status === "Approve"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                        }`}
-                      >
-                        {e.leave > 0 ? e.task : e.project_code}: {e.man_hour}h
-                      </div>
-                    ))}
-                    {day.entries.length > 2 && (
-                      <div className="text-[9px] text-slate-400 pl-1 font-semibold">
-                        +{day.entries.length - 2} more
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Hover hint */}
-                  <div className="hidden group-hover:block text-[9px] text-emerald-600 font-semibold pt-1">
-                    + Click to log
-                  </div>
-                </div>
-              );
-            })}
           </div>
         </div>
       )}

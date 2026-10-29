@@ -455,7 +455,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[96vw] max-w-5xl sm:max-w-4xl lg:max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 dark:border-slate-800">
             <div>
@@ -472,11 +472,11 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
 
             {/* Mode Switcher (Multi Full-Day vs Single) */}
             {!isEdit && (
-              <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-800 self-start sm:self-auto">
+              <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-800 self-start sm:self-auto shrink-0">
                 <button
                   type="button"
                   onClick={() => setEntryMode("multi")}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold transition ${
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition ${
                     entryMode === "multi"
                       ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
                       : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
@@ -488,7 +488,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                 <button
                   type="button"
                   onClick={() => setEntryMode("single")}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
                     entryMode === "single"
                       ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
                       : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
@@ -551,7 +551,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
               </div>
 
               {/* Progress track */}
-              <div className="h-6 w-full overflow-hidden rounded-lg bg-slate-100 flex p-0.5 gap-1 dark:bg-slate-800">
+              <div className="h-7 w-full overflow-hidden rounded-lg bg-slate-100 flex p-0.5 gap-1 dark:bg-slate-800">
                 {segments.map((seg, idx) => {
                   const dur = getSegmentDuration(seg.startTime, seg.finishTime);
                   const proj = projects.find((p) => p.project_id === seg.projectId);
@@ -559,10 +559,10 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                     <div
                       key={seg.id}
                       style={{ flex: Math.max(0.5, dur) }}
-                      className="h-full rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-[10px] font-bold truncate px-1 transition cursor-pointer shadow-xs"
+                      className="min-w-0 h-full rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-[10px] font-bold px-1.5 transition cursor-pointer shadow-xs truncate"
                       title={`Slot #${idx + 1}: ${seg.startTime}-${seg.finishTime} (${dur}h) - ${proj?.project_code || "Project"}`}
                     >
-                      #{idx + 1}: {seg.startTime}-{seg.finishTime} ({dur}h)
+                      <span className="truncate">#{idx + 1}: {seg.startTime}-{seg.finishTime} ({dur}h)</span>
                     </div>
                   );
                 })}
@@ -578,11 +578,11 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                 return (
                   <div
                     key={seg.id}
-                    className="rounded-xl border border-slate-200 bg-white p-3.5 space-y-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900 hover:border-emerald-300 transition"
+                    className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900 hover:border-emerald-300 transition"
                   >
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
-                      <div className="flex items-center gap-2">
-                        <span className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white shrink-0">
                           {index + 1}
                         </span>
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
@@ -606,7 +606,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDuplicateSegment(seg)}
-                          className="h-7 px-2 text-[11px] text-slate-600 hover:text-emerald-700"
+                          className="h-7 px-2.5 text-[11px] text-slate-600 hover:text-emerald-700"
                           title="Duplicate slot"
                         >
                           <Copy className="size-3 mr-1" />
@@ -627,7 +627,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                     </div>
 
                     {/* Slot Fields Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                       {/* Start Time */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-slate-500 font-semibold">Start Time</Label>
@@ -635,7 +635,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                           type="time"
                           value={seg.startTime}
                           onChange={(e) => handleUpdateSegment(seg.id, { startTime: e.target.value })}
-                          className="h-8 text-xs font-mono"
+                          className="h-8 text-xs font-mono w-full"
                         />
                       </div>
 
@@ -646,7 +646,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                           type="time"
                           value={seg.finishTime}
                           onChange={(e) => handleUpdateSegment(seg.id, { finishTime: e.target.value })}
-                          className="h-8 text-xs font-mono"
+                          className="h-8 text-xs font-mono w-full"
                         />
                       </div>
 
@@ -659,7 +659,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                             if (val !== null) handleUpdateSegment(seg.id, { projectId: Number(val), tagName: "" });
                           }}
                         >
-                          <SelectTrigger className="h-8 text-xs">
+                          <SelectTrigger className="h-8 text-xs w-full">
                             <SelectValue placeholder="Select Project" />
                           </SelectTrigger>
                           <SelectContent>
@@ -684,7 +684,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                             if (val !== null) handleUpdateSegment(seg.id, { task: val });
                           }}
                         >
-                          <SelectTrigger className="h-8 text-xs">
+                          <SelectTrigger className="h-8 text-xs w-full">
                             <SelectValue placeholder="Task" />
                           </SelectTrigger>
                           <SelectContent>
@@ -699,7 +699,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                     </div>
 
                     {/* Tag & Detail Row */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
                       {/* Sprint / Tag */}
                       <div className="space-y-1">
                         <Label className="text-[11px] text-slate-500 font-semibold">Sprint / Tag (Optional)</Label>
@@ -709,7 +709,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                             if (val !== null) handleUpdateSegment(seg.id, { tagName: val === "NONE" ? "" : val });
                           }}
                         >
-                          <SelectTrigger className="h-8 text-xs">
+                          <SelectTrigger className="h-8 text-xs w-full">
                             <SelectValue placeholder="Sprint / Tag" />
                           </SelectTrigger>
                           <SelectContent>
@@ -726,14 +726,14 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
                       </div>
 
                       {/* Notes / Detail */}
-                      <div className="sm:col-span-2 space-y-1">
+                      <div className="md:col-span-2 space-y-1">
                         <Label className="text-[11px] text-slate-500 font-semibold">Work Detail / Notes</Label>
                         <Input
                           type="text"
                           placeholder="e.g. Sprint planning meeting, bug fix for login flow..."
                           value={seg.detail}
                           onChange={(e) => handleUpdateSegment(seg.id, { detail: e.target.value })}
-                          className="h-8 text-xs"
+                          className="h-8 text-xs w-full"
                         />
                       </div>
                     </div>
