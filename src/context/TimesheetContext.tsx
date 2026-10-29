@@ -24,11 +24,13 @@ import {
   getAuditLogs,
   getStoredApiCredentials,
   saveStoredApiCredentials,
+  clearStoredApiCredentials,
   getStoredUserProfile,
   saveStoredUserProfile,
   safeFetchBackend,
   SafetyAuditLog,
 } from "@/services/apiSafetyClient";
+import { inspectJwt } from "@/utils/jwtUtils";
 import * as XLSX from "xlsx";
 
 interface TimesheetContextType {
@@ -50,6 +52,7 @@ interface TimesheetContextType {
   isSyncingApi: boolean;
   apiSyncError: string | null;
   setApiCredentials: (token: string, employeeId: string) => Promise<boolean>;
+  clearApiCredentials: () => void;
   syncWithRealApi: (targetDate?: string) => Promise<boolean>;
   fetchRealTagsForProject: (projectId: number) => Promise<{ tag_timesheet_id: number; tag_name: string; tag_element_ts: string }[]>;
   addCustomProject: (project: Project) => void;
@@ -128,10 +131,14 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (!projRes.success && projRes.status === 401) {
         setIsRealApiConnected(false);
         const errDetail = projRes.error || "Invalid signature";
-        setApiSyncError(`Unauthorized (401): ${errDetail}. Your session token has expired or is invalid.`);
+        setApiSyncError(`Unauthorized (401): ${errDetail}. Stored invalid/expired session has been cleared.`);
         setIsSyncingApi(false);
+        // Clear bad token from storage immediately to stop repeating 401 loops
+        clearStoredApiCredentials();
+        setApiToken("");
+        setApiEmployeeId("");
         toast.error("Timesheet Session Expired or Invalid", {
-          description: `Backend returned 401 (${errDetail}). Please refresh timesheet.sirisoft.co.th and re-sync your session.`,
+          description: `Backend returned 401 (${errDetail}). Session cleared. Please refresh timesheet.sirisoft.co.th to renew.`,
         });
         return false;
       }
@@ -352,6 +359,18 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     return await syncWithRealApi();
   };
+
+  const clearApiCredentials = useCallback(() => {
+    clearStoredApiCredentials();
+    setApiToken("");
+    setApiEmployeeId("");
+    setIsRealApiConnected(false);
+    setApiSyncError(null);
+    setCurrentUserState(DEFAULT_USER);
+    toast.info("Session Disconnected", {
+      description: "Stored bearer token and employee session have been reset.",
+    });
+  }, []);
 
   const addCustomProject = (proj: Project) => {
     setProjects((prev) => [...prev, proj]);
@@ -763,6 +782,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isSyncingApi,
         apiSyncError,
         setApiCredentials,
+        clearApiCredentials,
         syncWithRealApi,
         fetchRealTagsForProject,
         addCustomProject,

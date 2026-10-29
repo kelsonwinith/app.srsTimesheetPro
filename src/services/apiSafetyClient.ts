@@ -43,6 +43,17 @@ export function saveStoredApiCredentials(token: string, employeeId: string) {
   }
 }
 
+export function clearStoredApiCredentials() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(EMPLOYEE_ID_KEY);
+    localStorage.removeItem(USER_PROFILE_KEY);
+  } catch (err) {
+    console.error("Failed to clear credentials", err);
+  }
+}
+
 export function getStoredUserProfile(): any | null {
   if (typeof window === "undefined") return null;
   try {
