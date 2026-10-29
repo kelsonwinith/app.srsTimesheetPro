@@ -203,13 +203,19 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                       className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 h-9 px-2.5 text-xs rounded-xl shadow-2xs"
                     >
                       <div className="relative size-6 overflow-hidden rounded-full border border-emerald-200 dark:border-emerald-800 bg-emerald-50 shrink-0">
-                        <Image
-                          src={currentUser.avatarUrl || "/assets/images/profile.svg"}
-                          alt={currentUser.displayName}
-                          fill
-                          sizes="24px"
-                          className="object-cover"
-                        />
+                        {currentUser.avatarUrl ? (
+                          <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.displayName || "User"}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src="/assets/images/profile.svg"
+                            alt="User"
+                            className="size-full object-cover"
+                          />
+                        )}
                       </div>
                       <span className="hidden sm:inline font-semibold text-slate-800 dark:text-slate-200">
                         {currentUser.displayName}
@@ -230,13 +236,19 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                   <div className="p-4 flex flex-col items-center text-center space-y-3">
                     {/* Profile Image */}
                     <div className="relative size-16 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs">
-                      <Image
-                        src={currentUser.avatarUrl || "/assets/images/profile.svg"}
-                        alt={currentUser.displayName}
-                        fill
-                        sizes="64px"
-                        className="object-cover"
-                      />
+                      {currentUser.avatarUrl ? (
+                        <img
+                          src={currentUser.avatarUrl}
+                          alt={currentUser.displayName || "User"}
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        <img
+                          src="/assets/images/profile.svg"
+                          alt="User"
+                          className="size-full object-cover"
+                        />
+                      )}
                     </div>
 
                     {/* Employee ID & Name & Job & Dept - No mock data fallback */}

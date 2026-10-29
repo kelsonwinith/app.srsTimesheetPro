@@ -265,8 +265,18 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   }
 
-  const populateUserFromToken = (tok: string, empId?: string, profileObj?: any) => {
+  const populateUserFromToken = (tok: string, empId?: string, profileObj?: any, photoUrl?: string) => {
     try {
+      const storedAvatar = typeof window !== "undefined" ? localStorage.getItem("sirisoft_real_user_avatar") : null;
+      const effectiveAvatar =
+        photoUrl ||
+        storedAvatar ||
+        profileObj?.avatarUrl ||
+        profileObj?.photo ||
+        profileObj?.profileImage ||
+        profileObj?.image ||
+        "/assets/images/profile.svg";
+
       if (profileObj && typeof profileObj === "object") {
         const extractedEmpId =
           empId ||
@@ -300,12 +310,6 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } else if (typeof profileObj.supervisor === "string") {
           reportTo = profileObj.supervisor;
         }
-        const avatarUrl =
-          profileObj.avatarUrl ||
-          profileObj.photo ||
-          profileObj.image ||
-          profileObj.picture ||
-          "/assets/images/profile.svg";
 
         const updated: UserProfile = {
           id: String(extractedEmpId || "user-current"),
@@ -318,7 +322,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           role: "Employee",
           menu: ["timesheet", "approval", "projectManagement", "report", "setting"],
           reportTo,
-          avatarUrl,
+          avatarUrl: effectiveAvatar,
         };
 
         setCurrentUserState(updated);
@@ -341,7 +345,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
               mail: email || prev.mail,
               givenName: givenName || prev.givenName,
               employeeId: extractedEmpId ? Number(extractedEmpId) || prev.employeeId : prev.employeeId,
-              avatarUrl: prev.avatarUrl || "/assets/images/profile.svg",
+              avatarUrl: effectiveAvatar || prev.avatarUrl || "/assets/images/profile.svg",
             };
             saveStoredUserProfile(next);
             return next;
@@ -371,6 +375,12 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const clearApiCredentials = useCallback(() => {
     clearStoredApiCredentials();
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("sirisoft_real_user_avatar");
+        localStorage.removeItem("sirisoft_real_graph_token");
+      } catch (e) {}
+    }
     setApiToken("");
     setApiEmployeeId("");
     setIsRealApiConnected(false);
@@ -393,12 +403,16 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       let autoToken = "";
       let autoEmpId = "";
       let autoProfile: any = null;
+      let autoPhoto = "";
+      let autoGraphToken = "";
 
       if (typeof window !== "undefined") {
         if (window.location.hash && window.location.hash.length > 1) {
           const hashParams = new URLSearchParams(window.location.hash.substring(1));
           autoToken = hashParams.get("token") || "";
           autoEmpId = hashParams.get("empId") || "";
+          autoPhoto = hashParams.get("photo") || "";
+          autoGraphToken = hashParams.get("gtok") || "";
           const rawProfile = hashParams.get("profile");
           if (rawProfile) {
             try {
@@ -411,12 +425,55 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           const searchParams = new URLSearchParams(window.location.search);
           autoToken = searchParams.get("token") || "";
           autoEmpId = searchParams.get("empId") || "";
+          autoPhoto = searchParams.get("photo") || "";
+          autoGraphToken = searchParams.get("gtok") || "";
           const rawProfile = searchParams.get("profile");
           if (rawProfile) {
             try {
               autoProfile = JSON.parse(rawProfile);
             } catch (e) {}
           }
+        }
+      }
+
+      if (autoPhoto) {
+        try {
+          localStorage.setItem("sirisoft_real_user_avatar", autoPhoto);
+        } catch (e) {}
+      }
+      if (autoGraphToken) {
+        try {
+          localStorage.setItem("sirisoft_real_graph_token", autoGraphToken);
+        } catch (e) {}
+      }
+
+      // If Graph token is available, try fetching the avatar directly if not already present
+      const activeGraphToken =
+        autoGraphToken ||
+        (typeof window !== "undefined" ? localStorage.getItem("sirisoft_real_graph_token") : null);
+      if (activeGraphToken && !autoPhoto && typeof window !== "undefined") {
+        const stored = localStorage.getItem("sirisoft_real_user_avatar");
+        if (!stored || stored === "/assets/images/profile.svg") {
+          fetch("https://graph.microsoft.com/v1.0/me/photos/120x120/$value", {
+            headers: { Authorization: `Bearer ${activeGraphToken}` },
+          })
+            .then((r) => (r.ok ? r.blob() : null))
+            .then((blob) => {
+              if (blob) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  const b64 = reader.result as string;
+                  if (b64) {
+                    try {
+                      localStorage.setItem("sirisoft_real_user_avatar", b64);
+                    } catch (e) {}
+                    setCurrentUserState((prev) => ({ ...prev, avatarUrl: b64 }));
+                  }
+                };
+                reader.readAsDataURL(blob);
+              }
+            })
+            .catch(() => {});
         }
       }
 
@@ -429,7 +486,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           setApiEmployeeId(autoEmpId);
         }
 
-        populateUserFromToken(autoToken, autoEmpId, autoProfile);
+        populateUserFromToken(autoToken, autoEmpId, autoProfile, autoPhoto);
         window.history.replaceState({}, document.title, window.location.pathname);
 
         toast.success("Sync Timesheet session connected!", {
@@ -443,10 +500,16 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }
       } else {
         const storedProfile = getStoredUserProfile();
+        const storedAvatar =
+          typeof window !== "undefined" ? localStorage.getItem("sirisoft_real_user_avatar") : null;
+
         if (storedProfile && storedProfile.employeeId && storedProfile.employeeId !== 0) {
           if (storedProfile.reportTo && typeof storedProfile.reportTo === "object") {
             const r = storedProfile.reportTo as any;
             storedProfile.reportTo = r.displayName || r.name || "";
+          }
+          if (storedAvatar) {
+            storedProfile.avatarUrl = storedAvatar;
           }
           setCurrentUserState(storedProfile);
         } else {
@@ -457,7 +520,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         if (creds.token) {
           setApiToken(creds.token);
           if (!storedProfile) {
-            populateUserFromToken(creds.token, creds.employeeId);
+            populateUserFromToken(creds.token, creds.employeeId, undefined, storedAvatar || undefined);
           }
         }
         if (creds.employeeId) {
