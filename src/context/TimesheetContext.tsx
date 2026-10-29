@@ -284,13 +284,22 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const givenName = profileObj.givenName || (displayName ? displayName.split(" ")[0] : "");
         const department = profileObj.department || profileObj.division || "";
         const jobTitle = profileObj.jobTitle || profileObj.position || profileObj.title || "";
-        const reportTo =
-          profileObj.reportTo ||
-          profileObj.report_to ||
-          profileObj.manager ||
-          profileObj.managerName ||
-          profileObj.supervisor ||
-          "";
+        let reportTo = "";
+        if (profileObj.manager && typeof profileObj.manager === "object") {
+          reportTo = profileObj.manager.displayName || profileObj.manager.name || "";
+        } else if (profileObj.reportTo && typeof profileObj.reportTo === "object") {
+          reportTo = profileObj.reportTo.displayName || profileObj.reportTo.name || "";
+        } else if (typeof profileObj.reportTo === "string") {
+          reportTo = profileObj.reportTo;
+        } else if (typeof profileObj.report_to === "string") {
+          reportTo = profileObj.report_to;
+        } else if (typeof profileObj.manager === "string") {
+          reportTo = profileObj.manager;
+        } else if (typeof profileObj.managerName === "string") {
+          reportTo = profileObj.managerName;
+        } else if (typeof profileObj.supervisor === "string") {
+          reportTo = profileObj.supervisor;
+        }
         const avatarUrl =
           profileObj.avatarUrl ||
           profileObj.photo ||
@@ -435,6 +444,10 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else {
         const storedProfile = getStoredUserProfile();
         if (storedProfile && storedProfile.employeeId && storedProfile.employeeId !== 0) {
+          if (storedProfile.reportTo && typeof storedProfile.reportTo === "object") {
+            const r = storedProfile.reportTo as any;
+            storedProfile.reportTo = r.displayName || r.name || "";
+          }
           setCurrentUserState(storedProfile);
         } else {
           setCurrentUserState(DEFAULT_USER);

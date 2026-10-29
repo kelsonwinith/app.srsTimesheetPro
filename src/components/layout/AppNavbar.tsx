@@ -59,6 +59,17 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
+  // Safely extract reportTo name whether it is a string or an expanded Graph manager object
+  const reportToName = React.useMemo(() => {
+    if (!currentUser?.reportTo) return "";
+    if (typeof currentUser.reportTo === "string") return currentUser.reportTo;
+    if (typeof currentUser.reportTo === "object" && currentUser.reportTo !== null) {
+      const obj = currentUser.reportTo as any;
+      return obj.displayName || obj.name || "";
+    }
+    return String(currentUser.reportTo || "");
+  }, [currentUser?.reportTo]);
+
   const hasUser = Boolean(
     currentUser &&
     currentUser.employeeId &&
@@ -228,36 +239,46 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                       />
                     </div>
 
-                    {/* Employee ID & Name & Job & Dept */}
+                    {/* Employee ID & Name & Job & Dept - No mock data fallback */}
                     <div className="space-y-1 w-full">
-                      <div className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                        {currentUser.employeeId || 663}
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 pt-0.5">
-                        {currentUser.displayName || "Sinthon Wilke"}
-                      </h4>
-                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        {currentUser.jobTitle || "Software Developer"}
-                      </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {currentUser.department || "Software Development"}
-                      </p>
+                      {currentUser.employeeId ? (
+                        <div className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                          {currentUser.employeeId}
+                        </div>
+                      ) : null}
+                      {currentUser.displayName ? (
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 pt-0.5">
+                          {currentUser.displayName}
+                        </h4>
+                      ) : null}
+                      {currentUser.jobTitle ? (
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                          {currentUser.jobTitle}
+                        </p>
+                      ) : null}
+                      {currentUser.department ? (
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {currentUser.department}
+                        </p>
+                      ) : null}
                     </div>
 
-                    {/* Report To Section */}
-                    <div className="w-full rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-left">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
-                        Report To
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="size-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200">
-                          {(currentUser.reportTo || "Pongsiri Kamkongkaew").substring(0, 1)}
+                    {/* Report To Section - rendered ONLY if present, no mock fallbacks */}
+                    {reportToName ? (
+                      <div className="w-full rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-left">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                          Report To
                         </div>
-                        <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
-                          {currentUser.reportTo || "Pongsiri Kamkongkaew"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <div className="size-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                            {reportToName.charAt(0)}
+                          </div>
+                          <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            {reportToName}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ) : null}
                   </div>
 
                   <DropdownMenuSeparator className="m-0" />
