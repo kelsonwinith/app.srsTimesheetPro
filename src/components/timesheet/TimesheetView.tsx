@@ -513,14 +513,10 @@ export const TimesheetView: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Hover effect: Plus icon at center, wording below it */}
-                  <div className="hidden group-hover:flex absolute inset-0 items-center justify-center flex-col gap-1 rounded-lg bg-emerald-50/95 dark:bg-slate-900/95 backdrop-blur-[1px] transition-all z-10 p-1">
-                    <div className="flex size-6 items-center justify-center rounded-full bg-emerald-700 text-white shadow-xs">
-                      <Plus className="size-3.5" />
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 tracking-tight text-center">
-                      Add Time Entry
-                    </span>
+                  {/* Hover hint */}
+                  <div className="hidden group-hover:flex flex-col items-center justify-center text-center text-emerald-600 dark:text-emerald-400 font-semibold pt-1">
+                    <Plus className="size-3.5" />
+                    <span className="text-[9px]">Add Time Entry</span>
                   </div>
                 </div>
               );
