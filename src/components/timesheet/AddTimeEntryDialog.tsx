@@ -90,8 +90,6 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
 
   const isEdit = !!editEntry;
 
-  // View mode
-  const [entryMode, setEntryMode] = useState<"multi" | "single">("multi");
   const [date, setDate] = useState<string>("2026-10-29");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -109,25 +107,14 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
   const [leaveOption, setLeaveOption] = useState<1 | 2>(2); // 1 = Half, 2 = Full
   const [leaveTypeId, setLeaveTypeId] = useState<number>(leaveTypes[0]?.leave_id || 1);
 
-  // Multi-Segment State
-  const [segments, setSegments] = useState<DaySegment[]>([
-    {
-      id: "seg-1",
-      startTime: "09:00",
-      finishTime: "18:00",
-      projectId: 0,
-      task: "",
-      tagName: "",
-      detail: "",
-    },
-  ]);
+  // Multi-Segment State - default empty (no initial slots)
+  const [segments, setSegments] = useState<DaySegment[]>([]);
 
   // Synchronize when opening or editing
   useEffect(() => {
     if (open) {
       setErrorMessage(null);
       if (editEntry) {
-        setEntryMode("single");
         setDate(editEntry.date);
         setSingleStartTime(editEntry.start_time);
         setSingleFinishTime(editEntry.finish_time);
@@ -146,7 +133,6 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
       } else {
         const targetDate = initialDate || new Date().toISOString().split("T")[0];
         setDate(targetDate);
-        setEntryMode("multi");
         setEntryType("work");
         setSingleIsAllDay(false);
         setSingleStartTime("09:00");
@@ -156,32 +142,12 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
           setSingleProjectId(projects[0].project_id);
           const firstTask = projects[0].tasks?.[0]?.task_name || "";
           setSingleTask(firstTask);
-          setSegments([
-            {
-              id: `seg-${Date.now()}-1`,
-              startTime: "09:00",
-              finishTime: "18:00",
-              projectId: projects[0].project_id,
-              task: firstTask,
-              tagName: "",
-              detail: "",
-            },
-          ]);
         } else {
           setSingleProjectId(0);
           setSingleTask("");
-          setSegments([
-            {
-              id: `seg-${Date.now()}-1`,
-              startTime: "09:00",
-              finishTime: "18:00",
-              projectId: 0,
-              task: "",
-              tagName: "",
-              detail: "",
-            },
-          ]);
         }
+        // Do not init any slot when opening modal
+        setSegments([]);
       }
     }
   }, [open, editEntry, initialDate, projects]);
@@ -217,17 +183,13 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
   };
 
   const handleRemoveSegment = (id: string) => {
-    if (segments.length <= 1) {
-      toast.error("At least one time segment is required.");
-      return;
-    }
     setSegments((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleAddNextSlot = () => {
     const lastSeg = segments[segments.length - 1];
     let nextStart = "09:00";
-    let nextFinish = "12:00";
+    let nextFinish = "18:00";
 
     if (lastSeg && lastSeg.finishTime) {
       nextStart = lastSeg.finishTime;
@@ -236,12 +198,15 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
       nextFinish = `${String(nextH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     }
 
+    const firstProj = projects[0];
+    const firstTask = firstProj?.tasks?.[0]?.task_name || COMMON_TASKS[0];
+
     const newSegment: DaySegment = {
-      id: `seg-${Date.now()}`,
+      id: `seg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       startTime: nextStart,
       finishTime: nextFinish,
-      projectId: lastSeg ? lastSeg.projectId : projects[0]?.project_id || 0,
-      task: lastSeg ? lastSeg.task : COMMON_TASKS[0],
+      projectId: lastSeg ? lastSeg.projectId : (firstProj?.project_id || 0),
+      task: lastSeg ? lastSeg.task : firstTask,
       tagName: "",
       detail: "",
     };
@@ -258,7 +223,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
 
     const newSeg: DaySegment = {
       ...seg,
-      id: `seg-${Date.now()}`,
+      id: `seg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       startTime: newStart,
       finishTime: newFinish,
     };
@@ -268,6 +233,11 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
   // Submit Multi-Segment Schedule
   const handleSubmitMultiSchedule = () => {
     setErrorMessage(null);
+
+    if (segments.length === 0) {
+      setErrorMessage("Please add at least one time slot before logging.");
+      return;
+    }
 
     // Validate segments
     for (let i = 0; i < segments.length; i++) {
@@ -459,44 +429,14 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
             <div>
               <DialogTitle className="flex items-center gap-2 text-slate-900 dark:text-slate-100 text-base font-bold">
                 <Clock className="size-5 text-emerald-600" />
-                <span>{isEdit ? "Edit Time Entry" : "Log Time Entry"}</span>
+                <span>{isEdit ? "Edit Time Entry" : "Full Day Planner"}</span>
               </DialogTitle>
               <DialogDescription className="text-xs">
                 {isEdit
                   ? "Update your existing timesheet record."
-                  : "Batch-log your entire day's hourly slots (e.g. 10-12, 12-13, 13-15, 15-18) in a single click."}
+                  : "Plan and batch-log your day's time slots in a single click."}
               </DialogDescription>
             </div>
-
-            {/* Mode Switcher (Multi Full-Day vs Single) */}
-            {!isEdit && (
-              <div className="flex rounded-lg border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-800 self-start sm:self-auto shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setEntryMode("multi")}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition ${
-                    entryMode === "multi"
-                      ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-                  }`}
-                >
-                  <Layers className="size-3.5" />
-                  <span>Full Day Planner ({segments.length} slots)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEntryMode("single")}
-                  className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                    entryMode === "single"
-                      ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
-                      : "text-slate-500 hover:text-slate-900 dark:text-slate-400"
-                  }`}
-                >
-                  <Clock className="size-3.5" />
-                  <span>Single Entry</span>
-                </button>
-              </div>
-            )}
           </div>
         </DialogHeader>
 
@@ -534,7 +474,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
         </div>
 
         {/* MODE A: Multi-Segment Full Day Planner */}
-        {entryMode === "multi" && !isEdit ? (
+        {!isEdit ? (
           <div className="space-y-4 py-1">
             {/* Visual Timeline Bar */}
             <div className="space-y-1.5 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
@@ -550,239 +490,240 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
 
               {/* Progress track */}
               <div className="h-7 w-full overflow-hidden rounded-lg bg-slate-100 flex p-0.5 gap-1 dark:bg-slate-800">
-                {segments.map((seg, idx) => {
-                  const dur = getSegmentDuration(seg.startTime, seg.finishTime);
-                  const proj = projects.find((p) => p.project_id === seg.projectId);
+                {segments.length === 0 ? (
+                  <div className="w-full flex items-center justify-center text-[11px] text-slate-400 italic">
+                    No time slots planned yet
+                  </div>
+                ) : (
+                  segments.map((seg, idx) => {
+                    const dur = getSegmentDuration(seg.startTime, seg.finishTime);
+                    const proj = projects.find((p) => p.project_id === seg.projectId);
+                    return (
+                      <div
+                        key={seg.id}
+                        style={{ flex: Math.max(0.5, dur) }}
+                        className="min-w-0 h-full rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-[10px] font-bold px-1.5 transition cursor-pointer shadow-xs truncate"
+                        title={`Slot #${idx + 1}: ${seg.startTime}-${seg.finishTime} (${dur}h) - ${proj?.project_code || "Project"}`}
+                      >
+                        <span className="truncate">#{idx + 1}: {seg.startTime}-{seg.finishTime} ({dur}h)</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* List of Slots or Empty State */}
+            {segments.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50/60 py-10 px-4 text-center dark:border-slate-800 dark:bg-slate-900/40">
+                <div className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 mb-3">
+                  <Clock className="size-6" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  No time slots added
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mb-4">
+                  Add your first time slot to start planning your timesheet for this day.
+                </p>
+                <Button
+                  type="button"
+                  onClick={handleAddNextSlot}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold gap-1.5 h-8 px-4 shadow-xs"
+                >
+                  <Plus className="size-4" />
+                  <span>Add Time Slot</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {segments.map((seg, index) => {
+                  const segDuration = getSegmentDuration(seg.startTime, seg.finishTime);
+                  const currentProj = projects.find((p) => p.project_id === seg.projectId);
+
                   return (
                     <div
                       key={seg.id}
-                      style={{ flex: Math.max(0.5, dur) }}
-                      className="min-w-0 h-full rounded bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center text-[10px] font-bold px-1.5 transition cursor-pointer shadow-xs truncate"
-                      title={`Slot #${idx + 1}: ${seg.startTime}-${seg.finishTime} (${dur}h) - ${proj?.project_code || "Project"}`}
+                      className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900 hover:border-emerald-300 transition"
                     >
-                      <span className="truncate">#{idx + 1}: {seg.startTime}-{seg.finishTime} ({dur}h)</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white shrink-0">
+                            {index + 1}
+                          </span>
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                            Slot #{index + 1}: {seg.startTime} → {seg.finishTime}
+                          </span>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] font-mono ${
+                              segDuration > 0
+                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold"
+                                : "bg-rose-100 text-rose-800"
+                            }`}
+                          >
+                            {segDuration > 0 ? `${segDuration} Hours` : "Invalid Time"}
+                          </Badge>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDuplicateSegment(seg)}
+                            className="h-7 px-2.5 text-[11px] text-slate-600 hover:text-emerald-700"
+                            title="Duplicate slot"
+                          >
+                            <Copy className="size-3 mr-1" />
+                            <span>Duplicate</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveSegment(seg.id)}
+                            className="h-7 px-2 text-[11px] text-slate-400 hover:text-rose-600"
+                            title="Remove slot"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Slot Fields Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        {/* Start Time */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={seg.startTime}
+                            onChange={(e) => handleUpdateSegment(seg.id, { startTime: e.target.value })}
+                            className="h-8 text-xs font-mono w-full"
+                          />
+                        </div>
+
+                        {/* Finish Time */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Finish Time</Label>
+                          <Input
+                            type="time"
+                            value={seg.finishTime}
+                            onChange={(e) => handleUpdateSegment(seg.id, { finishTime: e.target.value })}
+                            className="h-8 text-xs font-mono w-full"
+                          />
+                        </div>
+
+                        {/* Project */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Project</Label>
+                          <Select
+                            value={seg.projectId ? String(seg.projectId) : (projects[0]?.project_id ? String(projects[0].project_id) : "")}
+                            onValueChange={(val) => {
+                              if (val !== null) handleUpdateSegment(seg.id, { projectId: Number(val), tagName: "" });
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-full">
+                              <SelectValue placeholder="Select Project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                <SelectLabel>Available Projects</SelectLabel>
+                                {projects.map((p) => (
+                                  <SelectItem key={p.project_id} value={String(p.project_id)} className="text-xs">
+                                    {p.project_code} - {p.project_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Task */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Task</Label>
+                          <Select
+                            value={seg.task}
+                            onValueChange={(val) => {
+                              if (val !== null) handleUpdateSegment(seg.id, { task: val });
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-full">
+                              <SelectValue placeholder="Task" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COMMON_TASKS.map((t) => (
+                                <SelectItem key={t} value={t} className="text-xs">
+                                  {t}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Tag & Detail Row */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+                        {/* Sprint / Tag */}
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Sprint / Tag (Optional)</Label>
+                          <Select
+                            value={seg.tagName || "NONE"}
+                            onValueChange={(val) => {
+                              if (val !== null) handleUpdateSegment(seg.id, { tagName: val === "NONE" ? "" : val });
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs w-full">
+                              <SelectValue placeholder="Sprint / Tag" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="NONE" className="text-xs italic text-slate-400">
+                                -- No Tag --
+                              </SelectItem>
+                              {currentProj?.tags.map((tg) => (
+                                <SelectItem key={tg.tag_timesheet_id} value={tg.tag_name} className="text-xs">
+                                  {tg.tag_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Notes / Detail */}
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-[11px] text-slate-500 font-semibold">Work Detail / Notes</Label>
+                          <Input
+                            type="text"
+                            placeholder="e.g. Sprint planning meeting, bug fix for login flow..."
+                            value={seg.detail}
+                            onChange={(e) => handleUpdateSegment(seg.id, { detail: e.target.value })}
+                            className="h-8 text-xs w-full"
+                          />
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/* List of Slots */}
-            <div className="space-y-3">
-              {segments.map((seg, index) => {
-                const segDuration = getSegmentDuration(seg.startTime, seg.finishTime);
-                const currentProj = projects.find((p) => p.project_id === seg.projectId);
-
-                return (
-                  <div
-                    key={seg.id}
-                    className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-2xs dark:border-slate-800 dark:bg-slate-900 hover:border-emerald-300 transition"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5 dark:border-slate-800">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="flex size-5 items-center justify-center rounded-full bg-emerald-700 text-[10px] font-bold text-white shrink-0">
-                          {index + 1}
-                        </span>
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          Slot #{index + 1}: {seg.startTime} → {seg.finishTime}
-                        </span>
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] font-mono ${
-                            segDuration > 0
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 font-bold"
-                              : "bg-rose-100 text-rose-800"
-                          }`}
-                        >
-                          {segDuration > 0 ? `${segDuration} Hours` : "Invalid Time"}
-                        </Badge>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDuplicateSegment(seg)}
-                          className="h-7 px-2.5 text-[11px] text-slate-600 hover:text-emerald-700"
-                          title="Duplicate slot"
-                        >
-                          <Copy className="size-3 mr-1" />
-                          <span>Duplicate</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          disabled={segments.length <= 1}
-                          onClick={() => handleRemoveSegment(seg.id)}
-                          className="h-7 px-2 text-[11px] text-slate-400 hover:text-rose-600 disabled:opacity-30"
-                          title="Remove slot"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Slot Fields Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-                      {/* Start Time */}
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Start Time</Label>
-                        <Input
-                          type="time"
-                          value={seg.startTime}
-                          onChange={(e) => handleUpdateSegment(seg.id, { startTime: e.target.value })}
-                          className="h-8 text-xs font-mono w-full"
-                        />
-                      </div>
-
-                      {/* Finish Time */}
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Finish Time</Label>
-                        <Input
-                          type="time"
-                          value={seg.finishTime}
-                          onChange={(e) => handleUpdateSegment(seg.id, { finishTime: e.target.value })}
-                          className="h-8 text-xs font-mono w-full"
-                        />
-                      </div>
-
-                      {/* Project */}
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Project</Label>
-                        <Select
-                          value={seg.projectId ? String(seg.projectId) : (projects[0]?.project_id ? String(projects[0].project_id) : "")}
-                          onValueChange={(val) => {
-                            if (val !== null) handleUpdateSegment(seg.id, { projectId: Number(val), tagName: "" });
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-full">
-                            <SelectValue placeholder="Select Project" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectLabel>Available Projects</SelectLabel>
-                              {projects.map((p) => (
-                                <SelectItem key={p.project_id} value={String(p.project_id)} className="text-xs">
-                                  {p.project_code} - {p.project_name}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Task */}
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Task</Label>
-                        <Select
-                          value={seg.task}
-                          onValueChange={(val) => {
-                            if (val !== null) handleUpdateSegment(seg.id, { task: val });
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-full">
-                            <SelectValue placeholder="Task" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {COMMON_TASKS.map((t) => (
-                              <SelectItem key={t} value={t} className="text-xs">
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    {/* Tag & Detail Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
-                      {/* Sprint / Tag */}
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Sprint / Tag (Optional)</Label>
-                        <Select
-                          value={seg.tagName || "NONE"}
-                          onValueChange={(val) => {
-                            if (val !== null) handleUpdateSegment(seg.id, { tagName: val === "NONE" ? "" : val });
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-full">
-                            <SelectValue placeholder="Sprint / Tag" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="NONE" className="text-xs italic text-slate-400">
-                              -- No Tag --
-                            </SelectItem>
-                            {currentProj?.tags.map((tg) => (
-                              <SelectItem key={tg.tag_timesheet_id} value={tg.tag_name} className="text-xs">
-                                {tg.tag_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Notes / Detail */}
-                      <div className="md:col-span-2 space-y-1">
-                        <Label className="text-[11px] text-slate-500 font-semibold">Work Detail / Notes</Label>
-                        <Input
-                          type="text"
-                          placeholder="e.g. Sprint planning meeting, bug fix for login flow..."
-                          value={seg.detail}
-                          onChange={(e) => handleUpdateSegment(seg.id, { detail: e.target.value })}
-                          className="h-8 text-xs w-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Add Next Slot Button */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddNextSlot}
-              className="w-full border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-800 text-xs font-bold py-2.5 dark:bg-emerald-950/20 dark:text-emerald-300"
-            >
-              <Plus className="size-4 mr-1 text-emerald-700" />
-              <span>Add Another Time Slot (Chains from previous slot)</span>
-            </Button>
-          </div>
-        ) : (
-          /* MODE B: Single Entry Form / Edit Form */
-          <form onSubmit={handleSubmitSingle} className="space-y-4 py-2 text-xs">
-            {/* Work vs Leave Switcher (Only if not editing existing work) */}
-            {!isEdit && (
-              <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-800 dark:bg-slate-800 w-fit">
-                <button
-                  type="button"
-                  onClick={() => setEntryType("work")}
-                  className={`rounded-md px-3 py-1 font-bold transition ${
-                    entryType === "work"
-                      ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
-                      : "text-slate-500"
-                  }`}
-                >
-                  Work Entry
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEntryType("leave")}
-                  className={`rounded-md px-3 py-1 font-bold transition ${
-                    entryType === "leave"
-                      ? "bg-white text-emerald-800 shadow-2xs dark:bg-slate-900 dark:text-emerald-300"
-                      : "text-slate-500"
-                  }`}
-                >
-                  Leave / Timeoff
-                </button>
-              </div>
             )}
 
+            {/* Add Next Slot Button */}
+            {segments.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddNextSlot}
+                className="w-full border-dashed border-emerald-400 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-800 text-xs font-bold py-2.5 dark:bg-emerald-950/20 dark:text-emerald-300"
+              >
+                <Plus className="size-4 mr-1 text-emerald-700" />
+                <span>Add Another Time Slot (Chains from previous slot)</span>
+              </Button>
+            )}
+          </div>
+        ) : (
+          /* Single Entry Form / Edit Form (Only when editing an existing entry) */
+          <form onSubmit={handleSubmitSingle} className="space-y-4 py-2 text-xs">
             {entryType === "work" ? (
               <>
                 {/* All Day Checkbox */}
@@ -984,12 +925,13 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
             Cancel
           </Button>
 
-          {entryMode === "multi" && !isEdit ? (
+          {!isEdit ? (
             <Button
               type="button"
               size="sm"
+              disabled={segments.length === 0}
               onClick={handleSubmitMultiSchedule}
-              className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold gap-1.5 px-4 shadow-sm"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold gap-1.5 px-4 shadow-sm disabled:opacity-50"
             >
               <CheckCircle2 className="size-4" />
               <span>Log Entire Day ({segments.length} Slots • {totalDayScheduleHours}h)</span>
@@ -1002,7 +944,7 @@ export const AddTimeEntryDialog: React.FC<AddTimeEntryDialogProps> = ({
               className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold gap-1.5 px-4 shadow-sm"
             >
               <CheckCircle2 className="size-4" />
-              <span>{isEdit ? "Update Entry" : "Save Entry"}</span>
+              <span>Update Entry</span>
             </Button>
           )}
         </DialogFooter>
