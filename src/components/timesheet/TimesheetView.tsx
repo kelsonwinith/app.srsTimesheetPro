@@ -28,6 +28,7 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  XCircle,
   Eye,
   Edit,
   Trash2,
@@ -177,37 +178,102 @@ export const TimesheetView: React.FC = () => {
     setIsAddOpen(true);
   };
 
-  // Calendar Day Generation (Sunday - Saturday)
+  // Calendar Day Generation (Sunday - Saturday) with color coding behaviors
   const calendarDays = useMemo(() => {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
     const firstDayIndex = new Date(selectedYear, selectedMonth - 1, 1).getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
     // Sun-Sat: Sunday is 0, so startOffset is firstDayIndex directly
     const startOffset = firstDayIndex;
 
-    const days: { dateStr: string; dayNumber: number; entries: TimesheetEntry[]; totalHours: number; isWeekend: boolean }[] = [];
+    const days: {
+      dateStr: string;
+      dayNumber: number;
+      entries: TimesheetEntry[];
+      totalHours: number;
+      isWeekend: boolean;
+      isPast: boolean;
+      isToday: boolean;
+      hasReject: boolean;
+      isUnfilled: boolean;
+      isIncomplete: boolean;
+      isApproved: boolean;
+    }[] = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const dayOfWeek = new Date(selectedYear, selectedMonth - 1, day).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const isToday = todayStr === dateStr;
+      const isPast = todayStr ? dateStr < todayStr : false;
 
-      const dayEntries = timesheets.filter(
-        (t) => t.employee_id === currentUser.employeeId && t.date === dateStr && t.timesheet_status !== "Reject"
+      // All entries for current user on this date (including Rejected ones)
+      const dayAllEntries = timesheets.filter(
+        (t) => t.employee_id === currentUser.employeeId && t.date === dateStr
       );
 
-      const totalHours = dayEntries.reduce((acc, cur) => acc + cur.man_hour, 0);
+      // Active entries (non-rejected)
+      const activeEntries = dayAllEntries.filter((t) => t.timesheet_status !== "Reject");
+      const hasReject = dayAllEntries.some((t) => t.timesheet_status === "Reject");
+      const totalHours = activeEntries.reduce((acc, cur) => acc + cur.man_hour, 0);
+
+      // Unfilled: only for past working days with 0 hours logged and no rejection
+      const isUnfilled = !isWeekend && isPast && totalHours === 0 && !hasReject;
+      // Incomplete: past working days with partial hours (> 0 and < 8.0) and no rejection
+      const isIncomplete = !isWeekend && isPast && totalHours > 0 && totalHours < 8.0 && !hasReject;
+      // Approved: 8+ hours complete and all active entries are Approved
+      const isApproved = totalHours >= 8.0 && activeEntries.length > 0 && activeEntries.every((e) => e.timesheet_status === "Approve");
 
       days.push({
         dateStr,
         dayNumber: day,
-        entries: dayEntries,
+        entries: dayAllEntries,
         totalHours,
         isWeekend,
+        isPast,
+        isToday,
+        hasReject,
+        isUnfilled,
+        isIncomplete,
+        isApproved,
       });
     }
 
     return { startOffset, days };
-  }, [selectedYear, selectedMonth, timesheets, currentUser.employeeId]);
+  }, [selectedYear, selectedMonth, timesheets, currentUser.employeeId, todayStr]);
+
+  // Month stats including unfilled days & unapproved hours
+  const unfilledStats = useMemo(() => {
+    let count = 0;
+    let missingHours = 0;
+
+    calendarDays.days.forEach((day) => {
+      if (day.isUnfilled) {
+        count += 1;
+        missingHours += 8;
+      } else if (day.isIncomplete) {
+        missingHours += Math.max(0, 8 - day.totalHours);
+      }
+    });
+
+    const monthEntries = timesheets.filter(
+      (t) => t.employee_id === currentUser.employeeId && t.date.startsWith(monthString)
+    );
+
+    const waitingEntries = monthEntries.filter((t) => t.timesheet_status === "Waiting");
+    const approvedEntries = monthEntries.filter((t) => t.timesheet_status === "Approve");
+    const rejectedEntries = monthEntries.filter((t) => t.timesheet_status === "Reject");
+
+    return {
+      unfilledDaysCount: count,
+      unfilledMissingHours: missingHours,
+      waitingCount: waitingEntries.length,
+      waitingHours: waitingEntries.reduce((sum, e) => sum + e.man_hour, 0),
+      approvedCount: approvedEntries.length,
+      approvedHours: approvedEntries.reduce((sum, e) => sum + e.man_hour, 0),
+      rejectedCount: rejectedEntries.length,
+      rejectedHours: rejectedEntries.reduce((sum, e) => sum + e.man_hour, 0),
+    };
+  }, [calendarDays.days, timesheets, currentUser.employeeId, monthString]);
 
   return (
     <div className="space-y-6">
@@ -421,6 +487,155 @@ export const TimesheetView: React.FC = () => {
         </div>
       </div>
 
+      {/* Summary KPI Cards ("our own style" with Unfilled, Unapproved, Approved, Rejected, Total) */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {/* 1. Unfilled Card */}
+        <div
+          onClick={() => setStatusFilter("ALL")}
+          className={`rounded-xl border p-3.5 shadow-2xs transition cursor-pointer ${
+            unfilledStats.unfilledDaysCount > 0
+              ? "border-amber-300 bg-amber-50/50 hover:border-amber-400 dark:border-amber-900/50 dark:bg-amber-950/25"
+              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+              Unfilled
+            </p>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
+              <AlertCircle className="size-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-amber-900 dark:text-amber-200">
+              {unfilledStats.unfilledDaysCount}
+            </span>
+            <span className="text-xs font-semibold text-amber-700/80 dark:text-amber-400">days</span>
+          </div>
+          <p className="mt-1 text-[11px] text-amber-700/90 dark:text-amber-400 truncate">
+            {unfilledStats.unfilledDaysCount > 0
+              ? `${unfilledStats.unfilledMissingHours.toFixed(0)}h missing past workdays`
+              : "All past workdays logged"}
+          </p>
+        </div>
+
+        {/* 2. Unapproved (Waiting) Card */}
+        <div
+          onClick={() => setStatusFilter((cur) => (cur === "Waiting" ? "ALL" : "Waiting"))}
+          className={`rounded-xl border p-3.5 shadow-2xs transition cursor-pointer ${
+            statusFilter === "Waiting"
+              ? "border-sky-500 bg-sky-50 ring-1 ring-sky-500 dark:bg-sky-950/40"
+              : "border-sky-200 bg-sky-50/40 hover:border-sky-300 dark:border-sky-900/50 dark:bg-sky-950/20"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-400">
+              Unapproved
+            </p>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+              <Clock className="size-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-sky-900 dark:text-sky-200">
+              {unfilledStats.waitingHours.toFixed(1)}
+            </span>
+            <span className="text-xs font-semibold text-sky-700/80 dark:text-sky-400">hrs</span>
+          </div>
+          <p className="mt-1 text-[11px] text-sky-700/90 dark:text-sky-400 truncate">
+            {unfilledStats.waitingCount} {unfilledStats.waitingCount === 1 ? "entry" : "entries"} pending approval
+          </p>
+        </div>
+
+        {/* 3. Approved Card */}
+        <div
+          onClick={() => setStatusFilter((cur) => (cur === "Approve" ? "ALL" : "Approve"))}
+          className={`rounded-xl border p-3.5 shadow-2xs transition cursor-pointer ${
+            statusFilter === "Approve"
+              ? "border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500 dark:bg-emerald-950/40"
+              : "border-emerald-200 bg-emerald-50/40 hover:border-emerald-300 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
+              Approved
+            </p>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+              <CheckCircle2 className="size-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-emerald-900 dark:text-emerald-200">
+              {unfilledStats.approvedHours.toFixed(1)}
+            </span>
+            <span className="text-xs font-semibold text-emerald-700/80 dark:text-emerald-400">hrs</span>
+          </div>
+          <p className="mt-1 text-[11px] text-emerald-700/90 dark:text-emerald-400 truncate">
+            {unfilledStats.approvedCount} {unfilledStats.approvedCount === 1 ? "entry" : "entries"} confirmed
+          </p>
+        </div>
+
+        {/* 4. Rejected Card */}
+        <div
+          onClick={() => setStatusFilter((cur) => (cur === "Reject" ? "ALL" : "Reject"))}
+          className={`rounded-xl border p-3.5 shadow-2xs transition cursor-pointer ${
+            statusFilter === "Reject"
+              ? "border-rose-500 bg-rose-50 ring-1 ring-rose-500 dark:bg-rose-950/40"
+              : unfilledStats.rejectedCount > 0
+              ? "border-rose-300 bg-rose-50/50 hover:border-rose-400 dark:border-rose-900/50 dark:bg-rose-950/25"
+              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-rose-800 dark:text-rose-400">
+              Rejected
+            </p>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300">
+              <XCircle className="size-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-rose-900 dark:text-rose-200">
+              {unfilledStats.rejectedHours.toFixed(1)}
+            </span>
+            <span className="text-xs font-semibold text-rose-700/80 dark:text-rose-400">hrs</span>
+          </div>
+          <p className="mt-1 text-[11px] text-rose-700/90 dark:text-rose-400 truncate">
+            {unfilledStats.rejectedCount > 0
+              ? `${unfilledStats.rejectedCount} requires action`
+              : "No rejections"}
+          </p>
+        </div>
+
+        {/* 5. Total Logged Card */}
+        <div
+          onClick={() => setStatusFilter("ALL")}
+          className={`col-span-2 sm:col-span-1 rounded-xl border p-3.5 shadow-2xs transition cursor-pointer ${
+            statusFilter === "ALL"
+              ? "border-slate-400 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/60"
+              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Total Logged
+            </p>
+            <div className="flex size-7 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+              <CalendarDays className="size-4" />
+            </div>
+          </div>
+          <div className="mt-2 flex items-baseline gap-1">
+            <span className="text-2xl font-black text-slate-900 dark:text-slate-100">
+              {summary.totalHours.toFixed(1)}
+            </span>
+            <span className="text-xs font-semibold text-slate-500">hrs</span>
+          </div>
+          <p className="mt-1 text-[11px] text-slate-500 truncate">
+            {summary.workingDays} active days logged
+          </p>
+        </div>
+      </div>
+
       {/* Main View Area (Calendar View First and Default) */}
       {viewMode === "calendar" ? (
         /* ============ CALENDAR & TIMELINE VIEW ============ */
@@ -443,19 +658,29 @@ export const TimesheetView: React.FC = () => {
 
             {/* Actual Days */}
             {calendarDays.days.map((day) => {
-              const isToday = todayStr === day.dateStr;
-              const isComplete = day.totalHours >= 8.0;
-              const isIncomplete = day.totalHours > 0 && day.totalHours < 8.0;
+              const isToday = day.isToday;
+              const hasReject = day.hasReject;
+              const isUnfilled = day.isUnfilled;
+              const isIncomplete = day.isIncomplete;
+              const isApproved = day.isApproved;
 
               return (
                 <div
                   key={day.dateStr}
                   onClick={() => handleOpenAddForDate(day.dateStr)}
                   className={`group relative min-h-24 rounded-lg border p-2 flex flex-col justify-between transition cursor-pointer ${
-                    isToday
-                      ? "border-emerald-600 bg-emerald-50/30 dark:border-emerald-400 dark:bg-emerald-950/20"
+                    hasReject
+                      ? "border-rose-400 bg-rose-50/45 hover:border-rose-500 hover:shadow-xs dark:border-rose-800 dark:bg-rose-950/25"
+                      : isUnfilled
+                      ? "border-dashed border-amber-300 bg-amber-50/30 hover:border-amber-400 hover:bg-amber-50/50 dark:border-amber-700/60 dark:bg-amber-950/20"
+                      : isToday
+                      ? "border-emerald-600 bg-emerald-50/35 ring-1 ring-emerald-500/40 dark:border-emerald-500 dark:bg-emerald-950/25"
+                      : isApproved
+                      ? "border-emerald-200 bg-emerald-50/20 hover:border-emerald-300 hover:shadow-xs dark:border-emerald-900/30 dark:bg-emerald-950/10"
+                      : isIncomplete
+                      ? "border-amber-200 bg-amber-50/15 hover:border-amber-300 hover:shadow-xs dark:border-amber-900/30 dark:bg-amber-950/10"
                       : day.isWeekend
-                      ? "border-slate-100 bg-slate-50/80 dark:border-slate-800 dark:bg-slate-900/40"
+                      ? "border-slate-100 bg-slate-50/75 dark:border-slate-800 dark:bg-slate-900/40 opacity-80"
                       : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-xs dark:border-slate-800 dark:bg-slate-900"
                   }`}
                 >
@@ -465,47 +690,75 @@ export const TimesheetView: React.FC = () => {
                       className={`size-6 flex items-center justify-center rounded-full text-xs font-bold ${
                         isToday
                           ? "bg-emerald-700 text-white"
+                          : hasReject
+                          ? "bg-rose-100 text-rose-800 font-black dark:bg-rose-900/60 dark:text-rose-200"
+                          : isUnfilled
+                          ? "text-amber-800 dark:text-amber-300 font-bold"
                           : "text-slate-700 dark:text-slate-300"
                       }`}
                     >
                       {day.dayNumber}
                     </span>
 
-                    {day.totalHours > 0 && (
+                    {/* Day status badge */}
+                    {hasReject ? (
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-900">
+                        <XCircle className="size-2.5" />
+                        <span>Reject</span>
+                      </span>
+                    ) : isUnfilled ? (
+                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200/80 dark:bg-amber-950 dark:text-amber-300">
+                        <AlertCircle className="size-2.5" />
+                        <span>Unfilled</span>
+                      </span>
+                    ) : day.totalHours > 0 ? (
                       <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                          isComplete
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isApproved
                             ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                             : isIncomplete
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                            : "bg-slate-100 text-slate-700"
+                            : "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-300"
                         }`}
                       >
                         {day.totalHours.toFixed(1)}h
                       </span>
-                    )}
+                    ) : null}
                   </div>
 
-                  {/* Day Entries mini pills */}
+                  {/* Day Entries mini pills or empty placeholder */}
                   <div className="mt-1 space-y-1 flex-1 overflow-hidden">
-                    {day.entries.slice(0, 2).map((e) => (
-                      <div
-                        key={e.timesheet_id}
-                        onClick={(ev) => {
-                          ev.stopPropagation();
-                          setSelectedDetailEntry(e);
-                        }}
-                        className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                          e.leave > 0
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                            : e.timesheet_status === "Approve"
-                            ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
-                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                        }`}
-                      >
-                        {e.leave > 0 ? e.task : e.project_code}: {e.man_hour}h
+                    {isUnfilled && (
+                      <div className="text-[10px] text-amber-700/80 dark:text-amber-400/80 italic pt-1 flex items-center gap-1">
+                        <span>Missing log (0/8h)</span>
                       </div>
-                    ))}
+                    )}
+                    {day.entries.slice(0, 2).map((e) => {
+                      const isEntryRejected = e.timesheet_status === "Reject";
+                      const isEntryApproved = e.timesheet_status === "Approve";
+
+                      return (
+                        <div
+                          key={e.timesheet_id}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            setSelectedDetailEntry(e);
+                          }}
+                          className={`truncate rounded px-1.5 py-0.5 text-[10px] font-medium transition cursor-pointer ${
+                            isEntryRejected
+                              ? "bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950 dark:text-rose-300"
+                              : e.leave > 0
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                              : isEntryApproved
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : "bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/60 dark:text-sky-300"
+                          }`}
+                        >
+                          {e.leave > 0 ? e.task : e.project_code}: {e.man_hour}h
+                          {isEntryRejected && " (Reject)"}
+                        </div>
+                      );
+                    })}
                     {day.entries.length > 2 && (
                       <div className="text-[9px] text-slate-400 pl-1 font-semibold">
                         +{day.entries.length - 2} more
@@ -514,13 +767,38 @@ export const TimesheetView: React.FC = () => {
                   </div>
 
                   {/* Hover hint: centered in the middle of the card with simple original styling */}
-                  <div className="pointer-events-none absolute inset-0 hidden group-hover:flex items-center justify-center gap-1 text-center text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold z-10">
+                  <div className="pointer-events-none absolute inset-0 hidden group-hover:flex items-center justify-center gap-1 text-center text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold z-10 bg-white/70 backdrop-blur-2xs rounded-lg dark:bg-slate-900/70">
                     <Plus className="size-3 shrink-0" />
                     <span>Add Time Entry</span>
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Calendar Status Legend */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-3 mt-4 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400">
+              Calendar Status Legend:
+            </span>
+            <div className="flex flex-wrap items-center gap-3 text-[11px]">
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-emerald-500" />
+                <span className="text-slate-600 dark:text-slate-300 font-medium">Approved</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-sky-500" />
+                <span className="text-slate-600 dark:text-slate-300 font-medium">Unapproved (Waiting)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full border border-dashed border-amber-500 bg-amber-100 dark:bg-amber-950" />
+                <span className="text-slate-600 dark:text-slate-300 font-medium">Unfilled (Past Day)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-rose-500" />
+                <span className="text-slate-600 dark:text-slate-300 font-medium">Rejected</span>
+              </div>
+            </div>
           </div>
         </div>
       ) : (
@@ -687,82 +965,6 @@ export const TimesheetView: React.FC = () => {
           <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2.5 text-xs text-slate-500 dark:border-slate-800">
             <span>Showing {userEntries.length} entries</span>
             <span>Month total: <strong className="text-slate-800 dark:text-slate-200">{summary.totalHours.toFixed(1)} hrs</strong></span>
-          </div>
-        </div>
-      )}
-
-      {/* Summary KPI Cards (Rendered only when month has logged entries) */}
-      {userEntries.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 pt-1">
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Total Worked
-            </p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {summary.totalHours.toFixed(1)}
-              </span>
-              <span className="text-xs text-slate-400">hrs</span>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-400">
-              {summary.workingDays} active days logged
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5 shadow-2xs dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider dark:text-emerald-400">
-              Approved
-            </p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
-                {summary.approvedHours.toFixed(1)}
-              </span>
-              <span className="text-xs text-emerald-600/70">hrs</span>
-            </div>
-            <p className="mt-1 text-[11px] text-emerald-700/80 dark:text-emerald-400">
-              Supervisor confirmed
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3.5 shadow-2xs dark:border-amber-900/50 dark:bg-amber-950/20">
-            <p className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider dark:text-amber-400">
-              Waiting Approval
-            </p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                {summary.waitingHours.toFixed(1)}
-              </span>
-              <span className="text-xs text-amber-600/70">hrs</span>
-            </div>
-            <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-400">
-              Under manager review
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Leave Taken
-            </p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                {summary.leaveDays}
-              </span>
-              <span className="text-xs text-slate-400">days</span>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-400">Annual &amp; sick leave</p>
-          </div>
-
-          <div className="col-span-2 sm:col-span-1 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-              Rejected
-            </p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">
-                {summary.rejectedHours.toFixed(1)}
-              </span>
-              <span className="text-xs text-rose-400">hrs</span>
-            </div>
-            <p className="mt-1 text-[11px] text-slate-400">Requires correction</p>
           </div>
         </div>
       )}
