@@ -514,8 +514,9 @@ export const TimesheetView: React.FC = () => {
                   </div>
 
                   {/* Hover hint */}
-                  <div className="hidden group-hover:flex items-center justify-center text-center text-[10px] text-emerald-700 dark:text-emerald-400 font-bold py-1 w-full">
-                    Add Time Entry
+                  <div className="hidden group-hover:flex items-center justify-center gap-1 text-center text-[10px] text-emerald-700 dark:text-emerald-400 font-bold py-1 w-full transition">
+                    <Plus className="size-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>Add Time Entry</span>
                   </div>
                 </div>
               );
