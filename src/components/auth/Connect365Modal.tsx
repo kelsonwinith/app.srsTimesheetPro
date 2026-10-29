@@ -7,7 +7,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -18,11 +17,7 @@ import {
   Bookmark,
   Copy,
   Check,
-  ShieldCheck,
   ExternalLink,
-  HelpCircle,
-  LogOut,
-  CheckCircle2,
 } from "lucide-react";
 
 interface Connect365ModalProps {
@@ -38,8 +33,6 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
     clearApiCredentials,
     isRealApiConnected,
     apiToken,
-    apiEmployeeId,
-    currentUser,
   } = useTimesheet();
 
   const [copiedBookmarklet, setCopiedBookmarklet] = useState(false);
@@ -65,48 +58,16 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-lg">
+      <DialogContent className="max-w-md sm:max-w-lg" showCloseButton={false}>
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 text-base font-bold">
-              <Sparkles className="size-4 text-emerald-600" />
-              Sync Timesheet Session
-            </DialogTitle>
-            {isRealApiConnected && (
-              <Badge className="bg-emerald-600 text-white text-[10px] gap-1 px-2 py-0.5 font-bold">
-                <CheckCircle2 className="size-3" />
-                Connected
-              </Badge>
-            )}
-          </div>
+          <DialogTitle className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 text-base font-bold">
+            <Sparkles className="size-4 text-emerald-600" />
+            Sync Timesheet Session
+          </DialogTitle>
           <DialogDescription className="text-xs">
             Authenticate with your Sirisoft account to load real projects, leaves, and logged timesheets.
           </DialogDescription>
         </DialogHeader>
-
-        {/* Connection Status Banner (if connected) */}
-        {isRealApiConnected && (
-          <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/80 p-3 text-xs dark:border-emerald-900/60 dark:bg-emerald-950/30">
-            <div className="space-y-0.5">
-              <div className="font-bold text-emerald-900 dark:text-emerald-300">
-                Active: {currentUser.displayName || "Employee"} {currentUser.employeeId ? `(#${currentUser.employeeId})` : ""}
-              </div>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                Connected to backend.timesheet.sirisoft.co.th (GET requests active).
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={clearApiCredentials}
-              className="h-7 text-xs border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-400 font-semibold gap-1"
-            >
-              <LogOut className="size-3" />
-              Disconnect
-            </Button>
-          </div>
-        )}
 
         {/* Main Bookmarklet Action Card */}
         <div className="rounded-2xl border-2 border-dashed border-emerald-300 bg-emerald-50/80 p-4 space-y-3 dark:border-emerald-800 dark:bg-emerald-950/40 text-xs">
@@ -191,39 +152,19 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
           </ol>
         </div>
 
-        {/* Session Expiry Note */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-[11px] text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300">
-          <div className="flex items-start gap-2">
-            <HelpCircle className="size-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              <span className="font-bold">Session Expiry (401)</span>
-              <p className="text-slate-600 dark:text-slate-300 leading-normal">
-                If your session expires after 1 hour, simply refresh <a href="https://timesheet.sirisoft.co.th/timesheet" target="_blank" rel="noreferrer" className="underline font-bold text-emerald-700">timesheet.sirisoft.co.th</a> (<kbd className="px-1 rounded bg-white border font-mono">Cmd+R</kbd> / <kbd className="px-1 rounded bg-white border font-mono">F5</kbd>) and click the bookmark again.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Safety Notice */}
-        <div className="rounded-xl bg-slate-50 p-2.5 text-[11px] text-slate-700 border border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 flex items-start gap-2">
-          <ShieldCheck className="size-4 text-emerald-600 shrink-0 mt-0.5" />
-          <p className="text-slate-500 dark:text-slate-400">
-            Strict Read-Only Guarantee: The token is strictly used to read your timesheet and projects via HTTP <code>GET</code>. All remote mutations are blocked.
-          </p>
-        </div>
-
-        <DialogFooter className="flex items-center justify-between sm:justify-between w-full">
-          {(apiToken || isRealApiConnected) ? (
+        {/* Footer: Clear Session on the left side of Close button, no divider lines */}
+        <div className="flex items-center justify-end gap-2 pt-2">
+          {(apiToken || isRealApiConnected) && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={clearApiCredentials}
-              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-400"
+              className="text-xs text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900 dark:text-rose-400"
             >
               Clear Session
             </Button>
-          ) : <div />}
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -232,7 +173,7 @@ export const Connect365Modal: React.FC<Connect365ModalProps> = ({
           >
             Close
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
