@@ -87,6 +87,7 @@ export interface UserProfile {
   jobTitle: string;
   mail: string;
   department: string;
+  team?: string;
   role: "Employee" | "Manager" | "Admin";
   menu: string[];
   reportTo?: string;

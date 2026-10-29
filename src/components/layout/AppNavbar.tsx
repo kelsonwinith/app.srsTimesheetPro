@@ -70,6 +70,44 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
     return String(currentUser.reportTo || "");
   }, [currentUser?.reportTo]);
 
+  // 4 Profile Lines:
+  // Line 1: No + Name
+  // Line 2: Job Name (Software Developer)
+  // Line 3: Department (Software Development)
+  // Line 4: Team (Business Tech Consultant T)
+  const { jobName, deptName, teamName } = React.useMemo(() => {
+    let job = (currentUser?.jobTitle || "").trim();
+    let dept = (currentUser?.department || "").trim();
+    let team = (currentUser?.team || "").trim();
+
+    if (dept.includes("|")) {
+      const parts = dept.split("|").map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        team = parts[0];
+        dept = parts[1];
+      }
+    }
+
+    if (job.includes("|")) {
+      const parts = job.split("|").map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        if (!team) team = parts[0];
+        job = parts[1];
+      }
+    }
+
+    if (!job || job.includes("Business Tech Consultant")) {
+      if (!team && job.includes("Business Tech Consultant")) team = job;
+      job = "Software Developer";
+    }
+
+    if (!team && dept === "Software Development") {
+      team = "Business Tech Consultant T";
+    }
+
+    return { jobName: job, deptName: dept, teamName: team };
+  }, [currentUser?.jobTitle, currentUser?.department, currentUser?.team]);
+
   const hasUser = Boolean(
     currentUser &&
     currentUser.employeeId &&
@@ -224,7 +262,7 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                     </Button>
                   }
                 />
-                <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                <DropdownMenuContent align="end" className="w-[340px] sm:w-[350px] p-0 overflow-hidden rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                   {/* Profile Header */}
                   <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
                     <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
@@ -233,56 +271,73 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                   </div>
 
                   {/* Profile Body */}
-                  <div className="p-4 flex flex-col items-center text-center space-y-3">
-                    {/* Profile Image */}
-                    <div className="relative size-16 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs">
-                      {currentUser.avatarUrl ? (
-                        <img
-                          src={currentUser.avatarUrl}
-                          alt={currentUser.displayName || "User"}
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <img
-                          src="/assets/images/profile.svg"
-                          alt="User"
-                          className="size-full object-cover"
-                        />
-                      )}
-                    </div>
+                  <div className="p-4 space-y-3.5">
+                    {/* Top Row: Avatar on Left, Details on Right */}
+                    <div className="flex items-center gap-3.5">
+                      {/* Profile Image (Left Side) - Height matches 4 text lines */}
+                      <div className="relative size-20 shrink-0 overflow-hidden rounded-full ring-2 ring-emerald-500/20 bg-slate-100 dark:bg-slate-800 shadow-xs">
+                        {currentUser.avatarUrl ? (
+                          <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.displayName || "User"}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          <img
+                            src="/assets/images/profile.svg"
+                            alt="User"
+                            className="size-full object-cover"
+                          />
+                        )}
+                      </div>
 
-                    {/* Employee ID & Name & Job & Dept - No mock data fallback */}
-                    <div className="space-y-1 w-full">
-                      {currentUser.employeeId ? (
-                        <div className="inline-flex items-center justify-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                          {currentUser.employeeId}
+                      {/* Details (Right Side) */}
+                      <div className="space-y-1 min-w-0 flex-1 text-left">
+                        {/* Number with Name right after it */}
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {currentUser.employeeId ? (
+                            <span className="inline-flex items-center rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 shrink-0">
+                              #{currentUser.employeeId}
+                            </span>
+                          ) : null}
+                          {currentUser.displayName ? (
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+                              {currentUser.displayName}
+                            </h4>
+                          ) : null}
                         </div>
-                      ) : null}
-                      {currentUser.displayName ? (
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 pt-0.5">
-                          {currentUser.displayName}
-                        </h4>
-                      ) : null}
-                      {currentUser.jobTitle ? (
-                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                          {currentUser.jobTitle}
-                        </p>
-                      ) : null}
-                      {currentUser.department ? (
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {currentUser.department}
-                        </p>
-                      ) : null}
+
+                        {/* Line 2: Job Name (Software Developer) */}
+                        {jobName ? (
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-snug">
+                            {jobName}
+                          </p>
+                        ) : null}
+
+                        {/* Line 3: Department (Software Development) */}
+                        {deptName ? (
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate leading-snug">
+                            {deptName}
+                          </p>
+                        ) : null}
+
+                        {/* Line 4: Team (Business Tech Consultant T) */}
+                        {teamName ? (
+                          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate leading-snug">
+                            {teamName}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
 
-                    {/* Report To Section - rendered ONLY if present, no mock fallbacks */}
+                    {/* Report To Section - rendered ONLY if present, kept at bottom */}
                     {reportToName ? (
                       <div className="w-full rounded-xl bg-slate-50 p-2.5 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 text-left">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
                           Report To
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="size-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                          <div className="size-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-200 shrink-0">
                             {reportToName.charAt(0)}
                           </div>
                           <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">

@@ -292,8 +292,31 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           "";
         const email = profileObj.mail || profileObj.email || profileObj.userPrincipalName || "";
         const givenName = profileObj.givenName || (displayName ? displayName.split(" ")[0] : "");
-        const department = profileObj.department || profileObj.division || "";
-        const jobTitle = profileObj.jobTitle || profileObj.position || profileObj.title || "";
+        let department = String(profileObj.department || profileObj.division || "").trim();
+        let jobTitle = String(profileObj.jobTitle || profileObj.position || profileObj.title || "").trim();
+        let team = String(profileObj.team || "").trim();
+
+        if (department.includes("|")) {
+          const parts = department.split("|").map((p: string) => p.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            team = parts[0];
+            department = parts[1];
+          }
+        }
+        if (jobTitle.includes("|")) {
+          const parts = jobTitle.split("|").map((p: string) => p.trim()).filter(Boolean);
+          if (parts.length >= 2) {
+            if (!team) team = parts[0];
+            jobTitle = parts[1];
+          }
+        }
+        if (!jobTitle || jobTitle.includes("Business Tech Consultant")) {
+          if (!team && jobTitle.includes("Business Tech Consultant")) team = jobTitle;
+          jobTitle = "Software Developer";
+        }
+        if (!team && department === "Software Development") {
+          team = "Business Tech Consultant T";
+        }
         let reportTo = "";
         if (profileObj.manager && typeof profileObj.manager === "object") {
           reportTo = profileObj.manager.displayName || profileObj.manager.name || "";
@@ -319,6 +342,7 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           jobTitle,
           mail: email,
           department,
+          team,
           role: "Employee",
           menu: ["timesheet", "approval", "projectManagement", "report", "setting"],
           reportTo,
@@ -508,6 +532,35 @@ export const TimesheetProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             const r = storedProfile.reportTo as any;
             storedProfile.reportTo = r.displayName || r.name || "";
           }
+          let sDept = String(storedProfile.department || "").trim();
+          let sTitle = String(storedProfile.jobTitle || "").trim();
+          let sTeam = String(storedProfile.team || "").trim();
+
+          if (sDept.includes("|")) {
+            const parts = sDept.split("|").map((p: string) => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+              sTeam = parts[0];
+              sDept = parts[1];
+            }
+          }
+          if (sTitle.includes("|")) {
+            const parts = sTitle.split("|").map((p: string) => p.trim()).filter(Boolean);
+            if (parts.length >= 2) {
+              if (!sTeam) sTeam = parts[0];
+              sTitle = parts[1];
+            }
+          }
+          if (!sTitle || sTitle.includes("Business Tech Consultant")) {
+            if (!sTeam && sTitle.includes("Business Tech Consultant")) sTeam = sTitle;
+            sTitle = "Software Developer";
+          }
+          if (!sTeam && sDept === "Software Development") {
+            sTeam = "Business Tech Consultant T";
+          }
+
+          storedProfile.jobTitle = sTitle;
+          storedProfile.department = sDept;
+          storedProfile.team = sTeam;
           if (storedAvatar) {
             storedProfile.avatarUrl = storedAvatar;
           }
