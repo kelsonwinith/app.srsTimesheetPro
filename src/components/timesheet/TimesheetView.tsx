@@ -513,12 +513,10 @@ export const TimesheetView: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Hover hint: centered directly in the middle of the card */}
-                  <div className="pointer-events-none absolute inset-0 hidden group-hover:flex items-center justify-center p-2 z-10">
-                    <div className="flex items-center gap-1 rounded-full bg-white/95 dark:bg-slate-900/95 border border-emerald-300 dark:border-emerald-700 px-2.5 py-1 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 shadow-sm backdrop-blur-xs">
-                      <Plus className="size-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>Add Time Entry</span>
-                    </div>
+                  {/* Hover hint: centered in the middle of the card with simple original styling */}
+                  <div className="pointer-events-none absolute inset-0 hidden group-hover:flex items-center justify-center gap-1 text-center text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold z-10">
+                    <Plus className="size-3 shrink-0" />
+                    <span>Add Time Entry</span>
                   </div>
                 </div>
               );
