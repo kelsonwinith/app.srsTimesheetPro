@@ -34,8 +34,10 @@ import {
   Calendar as CalendarIcon,
   List,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const TimesheetView: React.FC = () => {
   const {
@@ -68,9 +70,14 @@ export const TimesheetView: React.FC = () => {
   const [prefilledDate, setPrefilledDate] = useState<string | undefined>(undefined);
   const [todayStr, setTodayStr] = useState<string>("");
 
+  const [currentYear, setCurrentYear] = useState<number>(2026);
+  const [currentMonth, setCurrentMonth] = useState<number>(10);
+
   React.useEffect(() => {
     const now = new Date();
     setTodayStr(now.toISOString().split("T")[0]);
+    setCurrentYear(now.getFullYear());
+    setCurrentMonth(now.getMonth() + 1);
     setSelectedYear(now.getFullYear());
     setSelectedMonth(now.getMonth() + 1);
     try {
@@ -80,6 +87,17 @@ export const TimesheetView: React.FC = () => {
       }
     } catch {}
   }, []);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState<number>(selectedYear);
+
+  React.useEffect(() => {
+    setPickerYear(selectedYear);
+  }, [selectedYear]);
+
+  const isNextMonthDisabled =
+    selectedYear > currentYear ||
+    (selectedYear === currentYear && selectedMonth >= currentMonth);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -92,6 +110,7 @@ export const TimesheetView: React.FC = () => {
   };
 
   const handleNextMonth = () => {
+    if (isNextMonthDisabled) return;
     if (selectedMonth === 12) {
       setSelectedMonth(1);
       setSelectedYear((y) => y + 1);
@@ -158,12 +177,12 @@ export const TimesheetView: React.FC = () => {
     setIsAddOpen(true);
   };
 
-  // Calendar Day Generation
+  // Calendar Day Generation (Sunday - Saturday)
   const calendarDays = useMemo(() => {
     const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
-    const firstDayIndex = new Date(selectedYear, selectedMonth - 1, 1).getDay(); // 0 is Sunday
-    // Adjust so Monday is 0
-    const startOffset = (firstDayIndex + 6) % 7;
+    const firstDayIndex = new Date(selectedYear, selectedMonth - 1, 1).getDay(); // 0 is Sunday, 1 is Monday ... 6 is Saturday
+    // Sun-Sat: Sunday is 0, so startOffset is firstDayIndex directly
+    const startOffset = firstDayIndex;
 
     const days: { dateStr: string; dayNumber: number; entries: TimesheetEntry[]; totalHours: number; isWeekend: boolean }[] = [];
 
@@ -260,17 +279,91 @@ export const TimesheetView: React.FC = () => {
               size="icon"
               onClick={handlePrevMonth}
               className="size-7"
+              title="Previous Month"
             >
               <ChevronLeft className="size-4" />
             </Button>
-            <span className="min-w-28 text-center text-xs font-bold text-slate-800 dark:text-slate-200">
-              {monthNames[selectedMonth - 1]} {selectedYear}
-            </span>
+
+            {/* Clickable Calendar Dropdown to select Month and Year */}
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger
+                render={
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold text-slate-800 hover:text-emerald-700 hover:bg-slate-200/60 dark:text-slate-200 dark:hover:text-emerald-400 dark:hover:bg-slate-700 transition"
+                  >
+                    <CalendarIcon className="size-3.5 text-emerald-600" />
+                    <span>{monthNames[selectedMonth - 1]} {selectedYear}</span>
+                    <ChevronDown className="size-3 text-slate-400" />
+                  </button>
+                }
+              />
+              <PopoverContent align="start" className="w-64 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl space-y-3">
+                {/* Year Controller */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2 dark:border-slate-800">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    onClick={() => setPickerYear((y) => y - 1)}
+                    title="Previous Year"
+                  >
+                    <ChevronLeft className="size-3.5" />
+                  </Button>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">
+                    {pickerYear}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 disabled:opacity-30 disabled:cursor-not-allowed"
+                    disabled={pickerYear >= currentYear}
+                    onClick={() => setPickerYear((y) => Math.min(currentYear, y + 1))}
+                    title={pickerYear >= currentYear ? "Future year is not available" : "Next Year"}
+                  >
+                    <ChevronRight className="size-3.5" />
+                  </Button>
+                </div>
+
+                {/* 12 Months Grid */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {monthNames.map((mName, mIdx) => {
+                    const isSelected = selectedYear === pickerYear && selectedMonth === mIdx + 1;
+                    const isFuture = pickerYear > currentYear || (pickerYear === currentYear && mIdx + 1 > currentMonth);
+
+                    return (
+                      <button
+                        key={mName}
+                        type="button"
+                        disabled={isFuture}
+                        onClick={() => {
+                          setSelectedYear(pickerYear);
+                          setSelectedMonth(mIdx + 1);
+                          setPickerOpen(false);
+                        }}
+                        className={`rounded-lg py-1.5 text-xs font-semibold transition ${
+                          isSelected
+                            ? "bg-emerald-700 text-white font-bold shadow-xs"
+                            : isFuture
+                            ? "text-slate-300 dark:text-slate-600 cursor-not-allowed bg-slate-50/50 dark:bg-slate-800/30"
+                            : "text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                        }`}
+                      >
+                        {mName.substring(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <Button
               variant="ghost"
               size="icon"
               onClick={handleNextMonth}
-              className="size-7"
+              disabled={isNextMonthDisabled}
+              className="size-7 disabled:opacity-30 disabled:cursor-not-allowed"
+              title={isNextMonthDisabled ? "Next month is not available" : "Next Month"}
             >
               <ChevronRight className="size-4" />
             </Button>
@@ -334,7 +427,7 @@ export const TimesheetView: React.FC = () => {
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-2xs dark:border-slate-800 dark:bg-slate-900">
           {/* Day of Week Header */}
           <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-500">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
               <div key={d} className="py-1">
                 {d}
               </div>
@@ -421,8 +514,8 @@ export const TimesheetView: React.FC = () => {
                   </div>
 
                   {/* Hover hint */}
-                  <div className="hidden group-hover:block text-[9px] text-emerald-600 font-semibold pt-1">
-                    + Click to log
+                  <div className="hidden group-hover:flex items-center justify-center text-center text-[10px] text-emerald-700 dark:text-emerald-400 font-bold py-1 w-full">
+                    Add Time Entry
                   </div>
                 </div>
               );

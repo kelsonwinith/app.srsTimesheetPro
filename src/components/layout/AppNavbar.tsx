@@ -119,11 +119,6 @@ export const AppNavbar: React.FC<AppNavbarProps> = ({ currentTab, onTabChange })
                   priority
                 />
               </div>
-              <div className="hidden border-l border-slate-200 pl-3 md:block dark:border-slate-700">
-                <span className="text-xs font-bold tracking-tight text-emerald-800 dark:text-emerald-400">
-                  Timesheet Pro
-                </span>
-              </div>
             </button>
 
             {/* Desktop Navigation Links */}

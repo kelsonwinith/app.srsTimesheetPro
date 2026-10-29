@@ -4,10 +4,12 @@ import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Timesheet - Sirisoft",
+  title: "Timesheet Pro",
   description: "Enterprise Timesheet, Resource and Manday Tracking System",
   icons: {
-    icon: "/assets/images/logo-home.png",
+    icon: "/assets/images/logo.png",
+    shortcut: "/assets/images/logo.png",
+    apple: "/assets/images/logo.png",
   },
 };
 
